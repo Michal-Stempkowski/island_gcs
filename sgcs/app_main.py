@@ -1,13 +1,6 @@
 from sgcs.induction.cyk_runner import CykRunner
+from sgcs.induction.source_nodes.source_node import SourceNode
 
-
-source = """
-__global__ void cyk_kernel(int* prefs, int* sentence, int* table, int* table_header)
-{
-    const int thread_id = threadIdx.x;
-    table_header[thread_id] = thread_id;
-}
-"""
 
 class Sentence(object):
     pass
@@ -29,6 +22,18 @@ if __name__ == '__main__':
     print('Hello world!')
     world_settings = WorldSettings(3, 32)
     island_settings = [IslandSettings(16, 32, 16) for _ in range(world_settings.num_of_blocks)]
-    test = CykRunner(world_settings, island_settings, source)
+
+    src = SourceNode('kernel', """
+__global__ void cyk_kernel(int* prefs, int* sentence, int* table, int* table_header)
+{
+    const int thread_id = threadIdx.x;
+    table_header[thread_id] = thread_id;
+}
+""")
+
+    files = dict()
+    src.register(files)
+
+    test = CykRunner(world_settings, island_settings, src.link(files))
     sentence = [1, 2, 2, 2, 2, 1, 2, 2, 1, 3, 4, 5, 1, 3, 4, 5]
     test.run_cyk(sentence)
