@@ -1,5 +1,8 @@
 from sgcs.induction.source_generation.nodes import cuda_helper
 import sgcs.induction.source_generation.nodes.kernel as kernel
+import sgcs.induction.source_generation.nodes.kernel_main as kernel_main
+import sgcs.induction.source_generation.nodes.preferences as preferences
+import sgcs.induction.source_generation.nodes.cyk_table as cyk_table
 
 
 class CykSourceSchema(object):
@@ -10,6 +13,9 @@ class CykSourceSchema(object):
     def generate_schema(self):
         _ = self.kernel
         _ = self.cuda_helper
+        _ = self.kernel_main
+        _ = self.preferences
+        _ = self.cyk_table
 
         _ = self.kernel.link(self.files, kernel.tag())
         # print(_.split('\n')[-2])
@@ -39,6 +45,42 @@ class CykSourceSchema(object):
     @cuda_helper.deleter
     def cuda_helper(self):
         self._source_deleter(cuda_helper.tag())
+
+    @property
+    def kernel_main(self):
+        return self._source_getter(kernel_main.tag(), kernel_main.kernel_main)
+
+    @kernel_main.setter
+    def kernel_main(self, value):
+        self._source_setter(kernel_main.tag(), value)
+
+    @kernel_main.deleter
+    def kernel_main(self):
+        self._source_deleter(kernel_main.tag())
+
+    @property
+    def preferences(self):
+        return self._source_getter(preferences.tag(), preferences.preferences)
+
+    @preferences.setter
+    def preferences(self, value):
+        self._source_setter(preferences.tag(), value)
+
+    @preferences.deleter
+    def preferences(self):
+        self._source_deleter(preferences.tag())
+
+    @property
+    def cyk_table(self):
+        return self._source_getter(cyk_table.tag(), cyk_table.cyk_table)
+
+    @cyk_table.setter
+    def cyk_table(self, value):
+        self._source_setter(cyk_table.tag(), value)
+
+    @cyk_table.deleter
+    def cyk_table(self):
+        self._source_deleter(cyk_table.tag())
 
     def _source_getter(self, tag, default_source):
         if tag not in self.files:
