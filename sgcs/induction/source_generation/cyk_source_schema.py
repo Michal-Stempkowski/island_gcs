@@ -1,4 +1,4 @@
-import sgcs.induction.source_nodes.kernel as kernel
+import sgcs.induction.source_generation.nodes.kernel as kernel
 
 
 class CykSourceSchema(object):
@@ -10,7 +10,7 @@ class CykSourceSchema(object):
         _ = self.kernel
 
         _ = self.kernel.link(self.files, kernel.tag())
-        print(_)
+        print(_.split('\n')[-2])
         return _
 
     @property

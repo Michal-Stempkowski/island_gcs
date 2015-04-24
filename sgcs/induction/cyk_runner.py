@@ -1,8 +1,12 @@
 import numpy as np
 import pycuda.driver as cuda
-import pycuda.autoinit
 from pycuda.compiler import SourceModule
-from sgcs.induction.source_nodes import kernel
+
+import pycuda.autoinit
+
+_ = pycuda.autoinit
+
+from sgcs.induction.source_generation.nodes import kernel
 
 
 class CykRunner:
@@ -12,29 +16,8 @@ class CykRunner:
         self.source_code_schema = source_code_schema
         self.module = None
         self.func = lambda _1, _2, _3, _4, block: None
-
-
-    def run_test(self):
-        a = np.random.randn(4, 4)
-        a = a.astype(np.float32)
-        a_gpu = cuda.mem_alloc(a.nbytes)
-        cuda.memcpy_htod(a_gpu, a)
-
-        mod = SourceModule("""
-          __global__ void doublify(float *a)
-          {
-            int idx = threadIdx.x + threadIdx.y*4;
-            a[idx] *= 2;
-          }
-          """)
-
-        func = mod.get_function("doublify")
-        func(a_gpu, block=(4, 4, 1))
-
-        a_doubled = np.empty_like(a)
-        cuda.memcpy_dtoh(a_doubled, a_gpu)
-        print(a_doubled)
-        print(a)
+        self.cyk_block = None
+        self.cyk_header_block = None
 
     def compile_kernel_if_necessary(self):
         if self.source_code_schema.requires_update:
@@ -80,19 +63,12 @@ class CykRunner:
     def run_cyk(self, sentence):
         self.compile_kernel_if_necessary()
 
-        cyk_header_block = self.generate_cyk_header_block(sentence)
-        cyk_block = self.generate_cyk_block(len(cyk_header_block))
+        self.cyk_header_block = self.generate_cyk_header_block(sentence)
+        self.cyk_block = self.generate_cyk_block(len(self.cyk_header_block))
 
         self.func(
             cuda.In(self.preferences_table),
             cuda.In(np.array(sentence).astype(np.int32)[0]),
-            cuda.InOut(cyk_block),
-            cuda.InOut(cyk_header_block),
+            cuda.InOut(self.cyk_block),
+            cuda.InOut(self.cyk_header_block),
             block=(self.num_of_threads, 1, 1))
-
-        print(self.preferences_table)
-        print(cyk_header_block)
-        print(len(cyk_header_block))
-        print(cyk_block[:32])
-        print(len(cyk_block))
-        print(cuda.get_version())

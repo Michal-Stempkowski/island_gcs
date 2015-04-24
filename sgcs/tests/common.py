@@ -1,11 +1,5 @@
-import pycuda
 from sgcs.induction.cyk_runner import CykRunner
-from sgcs.induction.source_nodes.cyk_source_schema import CykSourceSchema
-from sgcs.induction.source_nodes.source_node import SourceNode
-
-
-class Sentence(object):
-    pass
+from sgcs.induction.source_generation.cyk_source_schema import CykSourceSchema
 
 
 class WorldSettings(object):
@@ -20,12 +14,16 @@ class IslandSettings(object):
         self.max_alphabet_size = max_alphabet_size
         self.max_symbols_in_cell = max_symbols_in_cell
 
-if __name__ == '__main__':
-    print('Hello world!')
+
+def get_sut():
+    # print('Hello world!')
     world_settings = WorldSettings(3, 32)
     island_settings = [IslandSettings(16, 32, 16) for _ in range(world_settings.num_of_blocks)]
     source_code_schema = CykSourceSchema()
 
     test = CykRunner(world_settings, island_settings, source_code_schema)
-    sentence = [1, 2, 2, 2, 2, 1, 2, 2, 1, 3, 4, 5, 1, 3, 4, 5]
-    test.run_cyk(sentence)
+
+    return test
+    # sentence = [1, 2, 2, 2, 2, 1, 2, 2, 1, 3, 4, 5, 1, 3, 4, 5]
+    # test.run_cyk(sentence)
+    # test.run_test()
