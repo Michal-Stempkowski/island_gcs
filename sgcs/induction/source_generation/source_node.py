@@ -20,7 +20,7 @@ class SourceNode(object):
         for filename in self.dependencies:
             if filename not in dependency_set:
                 dependency_set.add(filename)
-                result += files[filename].inner_link(dependency_set, filename)
+                result += files[filename].inner_link(files, dependency_set, filename)
 
         dependency_set.add(absolute_identifier)
         result += self.token_resolver.resolve_tokens(self, absolute_identifier, files, dependency_set)
@@ -50,7 +50,7 @@ class TokenResolver(object):
         source = node.source.replace(self.absolute_identifier_tag, absolute_identifier)
         source = source.replace(self.timestamp_string_tag, datetime.now().ctime())
 
-        for token, source_node in self.internal_dependencies:
+        for token, source_node in self.internal_dependencies.items():
             source = source.replace(token, source_node.inner_link(
                 files, dependency_set, self.private_header(node.name, token)))
 

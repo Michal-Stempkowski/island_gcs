@@ -1,3 +1,4 @@
+from sgcs.induction.source_generation.nodes import cuda_helper
 import sgcs.induction.source_generation.nodes.kernel as kernel
 
 
@@ -8,9 +9,11 @@ class CykSourceSchema(object):
 
     def generate_schema(self):
         _ = self.kernel
+        _ = self.cuda_helper
 
         _ = self.kernel.link(self.files, kernel.tag())
-        print(_.split('\n')[-2])
+        # print(_.split('\n')[-2])
+        print(_)
         return _
 
     @property
@@ -24,6 +27,18 @@ class CykSourceSchema(object):
     @kernel.deleter
     def kernel(self):
         self._source_deleter(kernel.tag())
+
+    @property
+    def cuda_helper(self):
+        return self._source_getter(cuda_helper.tag(), cuda_helper.cuda_helper)
+
+    @cuda_helper.setter
+    def cuda_helper(self, value):
+        self._source_setter(cuda_helper.tag(), value)
+
+    @cuda_helper.deleter
+    def cuda_helper(self):
+        self._source_deleter(cuda_helper.tag())
 
     def _source_getter(self, tag, default_source):
         if tag not in self.files:

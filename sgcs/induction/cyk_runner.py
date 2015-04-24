@@ -3,7 +3,6 @@ import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 
 import pycuda.autoinit
-
 _ = pycuda.autoinit
 
 from sgcs.induction.source_generation.nodes import kernel

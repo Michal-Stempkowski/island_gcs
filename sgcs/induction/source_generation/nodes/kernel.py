@@ -12,4 +12,5 @@ __global__ void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* t
 }
 
 // Compilation_time: __sn_timestamp_tag__
-""")
+""",
+                        dependencies=['cuda_helper'])
