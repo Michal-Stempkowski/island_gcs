@@ -9,7 +9,9 @@ class CykSourceSchema(object):
     def generate_schema(self):
         _ = self.kernel
 
-        return self.kernel.link(self.files, kernel.tag())
+        _ = self.kernel.link(self.files, kernel.tag())
+        print(_)
+        return _
 
     @property
     def kernel(self):
