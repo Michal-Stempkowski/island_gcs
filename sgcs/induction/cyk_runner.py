@@ -2,14 +2,17 @@ import numpy as np
 import pycuda.driver as cuda
 import pycuda.autoinit
 from pycuda.compiler import SourceModule
+from sgcs.induction.source_nodes import kernel
 
 
 class CykRunner:
-    def __init__(self, world_settings_schema, island_settings_schema, source_code):
+    def __init__(self, world_settings_schema, island_settings_schema, source_code_schema):
         self.preferences_table = self.generate_preferences_table(
             world_settings_schema, island_settings_schema)
-        self.module = SourceModule(source_code)
-        self.func = self.module.get_function('cyk_kernel')
+        self.source_code_schema = source_code_schema
+        self.module = None
+        self.func = lambda _1, _2, _3, _4, block: None
+
 
     def run_test(self):
         a = np.random.randn(4, 4)
@@ -32,6 +35,12 @@ class CykRunner:
         cuda.memcpy_dtoh(a_doubled, a_gpu)
         print(a_doubled)
         print(a)
+
+    def compile_kernel_if_necessary(self):
+        if self.source_code_schema.requires_update:
+            self.module = SourceModule(self.source_code_schema.generate_schema())
+            self.func = self.module.get_function(kernel.tag())
+            self.source_code_schema.requires_update = False
 
     @staticmethod
     def generate_preferences_table(world_settings, island_settings):
@@ -69,6 +78,8 @@ class CykRunner:
         return self.create_empty_int32_table(header_size * self.max_symbols_in_cell)
 
     def run_cyk(self, sentence):
+        self.compile_kernel_if_necessary()
+
         cyk_header_block = self.generate_cyk_header_block(sentence)
         cyk_block = self.generate_cyk_block(len(cyk_header_block))
 
