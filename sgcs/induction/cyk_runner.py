@@ -20,7 +20,7 @@ class CykRunner:
 
     def compile_kernel_if_necessary(self):
         if self.source_code_schema.requires_update:
-            self.module = SourceModule(self.source_code_schema.generate_schema())
+            self.module = SourceModule(self.source_code_schema.generate_schema(), no_extern_c=1)
             self.func = self.module.get_function(kernel.tag())
             self.source_code_schema.requires_update = False
 
