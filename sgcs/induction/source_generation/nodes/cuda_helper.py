@@ -5,6 +5,7 @@ def tag():
     return 'cuda_helper'
 
 cuda_debug = SourceNode('cuda_debug', """
+////CPP
 #if !defined CUDA_DEBUG
 #define CUDA_DEBUG 1
 #endif
@@ -17,6 +18,7 @@ cuda_debug = SourceNode('cuda_debug', """
 """)
 
 cuda_helper_common = SourceNode('cuda_helper_common', """
+////CPP
 #if !defined CUDA_HELPER_COMMON_H
 #define CUDA_HELPER_COMMON_H
 
@@ -30,6 +32,7 @@ cuda_helper_common = SourceNode('cuda_helper_common', """
 """)
 
 cuda_error = SourceNode('cuda_error', """
+////CPP
 #if !defined CUDA_ERROR_H
 #define CUDA_ERROR_H
 
@@ -43,6 +46,7 @@ enum error : int
 """)
 
 cuda_post_mortem = SourceNode('cuda_post_mortem', """
+////CPP
 #if !defined CUDA_POST_MORTEM_H
 #define CUDA_POST_MORTEM_H
 
@@ -93,7 +97,7 @@ __device__ void init_post_mortem(const int thread_id)
 """)
 
 cuda_table_helper = SourceNode('cuda_table_helper', """
-
+////CPP
 
 #if !defined CUDA_TABLE_HELPER_H
 #define CUDA_TABLE_HELPER_H
@@ -162,6 +166,7 @@ CCM int table_set(int* table, int absolute_index, int value)
 cuda_helper = SourceNode(
     'default_cyk_helper',
     """
+    ////CPP
 #include <iostream>
 #include <sstream>
 

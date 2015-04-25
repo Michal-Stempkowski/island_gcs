@@ -5,6 +5,7 @@ def tag():
     return 'kernel_main'
 
 kernel_main = SourceNode('default_cyk_kernel_main', """
+////CPP
 __device__ void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* table,
     int* table_header, int* error_table, const int thread_id, const int block_id)
 {

@@ -5,7 +5,9 @@ def tag():
     return 'preferences'
 
 
-preferences = SourceNode('preferences_access_class', """#if !defined(PREFERENCES_H)
+preferences = SourceNode('preferences_access_class', """
+////CPP
+#if !defined(PREFERENCES_H)
 #define PREFERENCES_H
 
 class preferences

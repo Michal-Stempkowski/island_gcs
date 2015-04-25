@@ -6,6 +6,7 @@ def tag():
 
 
 cyk_table = SourceNode('cyk_table_access_class', """
+////CPP
 #if !defined(CYK_TABLE_H)
 #define CYK_TABLE_H
 

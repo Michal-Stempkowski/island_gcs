@@ -6,6 +6,7 @@ def tag():
 
 # language=C++
 cyk_kernel = SourceNode('default_cyk_kernel', """
+////CPP
 extern "C" {
 
 __global__ void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* table, int* table_header, int* error_table)
