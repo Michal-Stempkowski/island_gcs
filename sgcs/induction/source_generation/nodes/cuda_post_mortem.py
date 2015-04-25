@@ -17,7 +17,7 @@ enum post_mortem_error : int
 
 __shared__ bool working_properly;
 
-__device__ void throw_post_mortem_error(local_data *thread_data,
+CCM void throw_post_mortem_error(local_data *thread_data,
     post_mortem_error error_code, const char* source_code_localization)
 {
     int index = generate_absolute_index(
@@ -41,7 +41,7 @@ __device__ void throw_post_mortem_error(local_data *thread_data,
     working_properly = false;
 }
 
-__device__ void init_post_mortem(const int thread_id)
+CCM void init_post_mortem(const int thread_id)
 {
     if (thread_id == 0)
     {

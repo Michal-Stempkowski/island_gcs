@@ -6,7 +6,7 @@ def tag():
 
 kernel_main = SourceNode('default_cyk_kernel_main', """
 ////CPP
-__device__ void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* table,
+CCM void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* table,
     int* table_header, int* error_table, const int thread_id, const int block_id)
 {
     const int number_of_blocks = preferences(block_id, AT).get(prefs, preferences::number_of_blocks);
@@ -21,7 +21,7 @@ __device__ void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* t
     for (int i = 0; working_properly && i < cyk.size(); ++i)
     {
         //// throw_post_mortem_error(&thread_data, post_mortem_error::test_error, AT);
-        log_debug("%d\\n", col);
+        //log_debug("%d\\n", col);
         if (row < 0 || col < 0 ||
             row >= cyk.size() || col >= cyk.size())
         {
@@ -29,22 +29,7 @@ __device__ void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* t
         }
         else if (row == 0)
         {
-            auto symbol = table_get(sentence, generate_absolute_index(
-                col, cyk.size()));
-
-            if (symbol < error::no_errors_occured)
-            {
-                throw_post_mortem_error(&thread_data, post_mortem_error::cyk_row_fill_error, AT);
-            }
-
-            auto result = cyk.add_symbol_to_cell(row, col, symbol);
-
-            if (result < error::no_errors_occured)
-            {
-                throw_post_mortem_error(&thread_data, post_mortem_error::cyk_row_fill_error, AT);
-            }
-
-
+            cyk.fill_first_row(sentence, row, col, &thread_data);
         }
         else
         {

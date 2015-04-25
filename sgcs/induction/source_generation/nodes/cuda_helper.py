@@ -26,7 +26,7 @@ cuda_helper_common = SourceNode('cuda_helper_common', """
 #define TOSTRING(x) STRINGIFY(x)
 #define AT __FILE__ ":" TOSTRING(__LINE__)
 
-#define CCM __host__ __device__
+#define CCM __device__
 
 #endif
 """)
