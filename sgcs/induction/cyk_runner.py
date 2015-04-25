@@ -12,9 +12,10 @@ class CykRunner:
     def __init__(self, world_settings_schema, island_settings_schema, source_code_schema):
         self.preferences_table = self.generate_preferences_table(
             world_settings_schema, island_settings_schema)
+        self.error_table = self.generate_post_mortem_error_table(world_settings_schema)
         self.source_code_schema = source_code_schema
         self.module = None
-        self.func = lambda _1, _2, _3, _4, block, grid: None
+        self.func = lambda _1, _2, _3, _4, _5, block, grid: None
         self.cyk_block = None
         self.cyk_header_block = None
 
@@ -36,6 +37,10 @@ class CykRunner:
             ] for settings in island_settings
         ])
         return prefs.reshape(1, len(prefs) * len(prefs[0])).astype(np.int32)[0]
+
+    @staticmethod
+    def generate_post_mortem_error_table(world_settings):
+        return np.zeros(world_settings.num_of_blocks * world_settings.num_of_threads, dtype=np.int32)
 
     @property
     def num_of_blocks(self):
@@ -70,5 +75,10 @@ class CykRunner:
             cuda.In(np.array(sentence).astype(np.int32)),
             cuda.InOut(self.cyk_block),
             cuda.InOut(self.cyk_header_block),
+            cuda.InOut(self.error_table),
             block=(self.num_of_threads, 1, 1),
             grid=(self.num_of_blocks, 1, 1))
+
+        if np.any(self.error_table != 0):
+            print(self.error_table)
+            raise RuntimeError()

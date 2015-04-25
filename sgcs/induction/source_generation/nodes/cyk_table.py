@@ -95,12 +95,12 @@ CCM int cyk_table::get_symbol_at(int row, int col, int pos)
 
 CCM int cyk_table::set_symbol_at(int row, int col, int pos, int val)
 {
-    log_debug("block_id=%d,  row=%d, col=%d, pos=%d, val=%d, index=%d\\n",
-        block_id, row, col, pos, val, generate_absolute_index(
-            block_id, number_of_blocks,
-            row, size(),
-            col, size(),
-            pos, depth()));
+    //// log_debug("block_id=%d,  row=%d, col=%d, pos=%d, val=%d, index=%d\\n",
+    ////     block_id, row, col, pos, val, generate_absolute_index(
+    ////         block_id, number_of_blocks,
+    ////         row, size(),
+    ////         col, size(),
+    ////         pos, depth()));
    return table_set(table, generate_absolute_index(
         block_id, number_of_blocks,
         row, size(),

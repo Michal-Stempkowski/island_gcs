@@ -5,8 +5,8 @@ def tag():
     return 'kernel_main'
 
 kernel_main = SourceNode('default_cyk_kernel_main', """
-CCM void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* table,
-    int* table_header, const int thread_id, const int block_id)
+__device__ void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* table,
+    int* table_header, int* error_table, const int thread_id, const int block_id)
 {
     const int number_of_blocks = preferences(block_id, AT).get(prefs, preferences::number_of_blocks);
     const int number_of_threads = preferences(block_id, AT).get(prefs,  preferences::number_of_threads);
@@ -16,8 +16,14 @@ CCM void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* table,
     int row = 0;
     int col = cyk.get_starting_col_coord_for_thread(thread_id);
 
-    for (int i = 0; i < cyk.size(); ++i)
+    for (int i = 0; working_properly && i < cyk.size(); ++i)
     {
+        if (thread_id == 5)
+        {
+            ////throw_post_mortem_error(error_table, block_id, number_of_blocks,
+            ////    thread_id,number_of_threads, post_mortem_error::test_error, AT);
+        }
+
         if (row < 0 || col < 0)
         {
 

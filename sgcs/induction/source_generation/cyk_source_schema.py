@@ -19,7 +19,7 @@ class CykSourceSchema(object):
 
         _ = self.kernel.link(self.files, kernel.tag())
         # print(_.split('\n')[-2])
-        print(_)
+        # print(_)
         return _
 
     @property
