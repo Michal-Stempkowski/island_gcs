@@ -3,6 +3,8 @@ import sgcs.induction.source_generation.nodes.kernel as kernel
 import sgcs.induction.source_generation.nodes.kernel_main as kernel_main
 import sgcs.induction.source_generation.nodes.preferences as preferences
 import sgcs.induction.source_generation.nodes.cyk_table as cyk_table
+import sgcs.induction.source_generation.nodes.local_data as local_data
+import sgcs.induction.source_generation.nodes.cuda_post_mortem as cuda_post_mortem
 
 
 class CykSourceSchema(object):
@@ -16,6 +18,8 @@ class CykSourceSchema(object):
         _ = self.kernel_main
         _ = self.preferences
         _ = self.cyk_table
+        _ = self.local_data
+        _ = self.cuda_post_mortem
 
         _ = self.kernel.link(self.files, kernel.tag())
         # print(_.split('\n')[-2])
@@ -81,6 +85,30 @@ class CykSourceSchema(object):
     @cyk_table.deleter
     def cyk_table(self):
         self._source_deleter(cyk_table.tag())
+
+    @property
+    def local_data(self):
+        return self._source_getter(local_data.tag(), local_data.local_data)
+
+    @local_data.setter
+    def local_data(self, value):
+        self._source_setter(local_data.tag(), value)
+
+    @local_data.deleter
+    def local_data(self):
+        self._source_deleter(local_data.tag())
+
+    @property
+    def cuda_post_mortem(self):
+        return self._source_getter(cuda_post_mortem.tag(), cuda_post_mortem.cuda_post_mortem)
+
+    @cuda_post_mortem.setter
+    def cuda_post_mortem(self, value):
+        self._source_setter(cuda_post_mortem.tag(), value)
+
+    @cuda_post_mortem.deleter
+    def cuda_post_mortem(self):
+        self._source_deleter(cuda_post_mortem.tag())
 
     def _source_getter(self, tag, default_source):
         if tag not in self.files:
