@@ -14,7 +14,7 @@ class CykRunner:
             world_settings_schema, island_settings_schema)
         self.source_code_schema = source_code_schema
         self.module = None
-        self.func = lambda _1, _2, _3, _4, block: None
+        self.func = lambda _1, _2, _3, _4, block, grid: None
         self.cyk_block = None
         self.cyk_header_block = None
 
@@ -67,7 +67,8 @@ class CykRunner:
 
         self.func(
             cuda.In(self.preferences_table),
-            cuda.In(np.array(sentence).astype(np.int32)[0]),
+            cuda.In(np.array(sentence).astype(np.int32)),
             cuda.InOut(self.cyk_block),
             cuda.InOut(self.cyk_header_block),
-            block=(self.num_of_threads, 1, 1))
+            block=(self.num_of_threads, 1, 1),
+            grid=(self.num_of_blocks, 1, 1))

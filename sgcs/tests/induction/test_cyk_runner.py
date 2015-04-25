@@ -36,3 +36,6 @@ class TestCykRunner(TestCase):
         self.sut.run_cyk(self.sentence)
         self.assertEquals(768, len(self.sut.cyk_header_block))
         self.assertEquals(12288, len(self.sut.cyk_block))
+
+        row_0 = np.extract((self.sut.cyk_block > 0), self.sut.cyk_block).tolist()
+        self.assertTrue(np.array_equal(row_0, np.concatenate((self.sentence, self.sentence, self.sentence))))

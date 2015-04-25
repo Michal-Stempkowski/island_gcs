@@ -32,7 +32,7 @@ public:
 
     CCM int get_row_coord_for_thread(int thread_id, int current_row, int current_col);
     CCM int get_starting_col_coord_for_thread(int thread_id);
-    CCM int get_coord_col_for_thread(int thread_id, int current_row, int current_col);
+    CCM int get_col_coord_for_thread(int thread_id, int current_row, int current_col);
 
 private:
     const int block_id;
@@ -95,6 +95,12 @@ CCM int cyk_table::get_symbol_at(int row, int col, int pos)
 
 CCM int cyk_table::set_symbol_at(int row, int col, int pos, int val)
 {
+    log_debug("block_id=%d,  row=%d, col=%d, pos=%d, val=%d, index=%d\\n",
+        block_id, row, col, pos, val, generate_absolute_index(
+            block_id, number_of_blocks,
+            row, size(),
+            col, size(),
+            pos, depth()));
    return table_set(table, generate_absolute_index(
         block_id, number_of_blocks,
         row, size(),
@@ -152,7 +158,7 @@ CCM int cyk_table::get_starting_col_coord_for_thread(int thread_id)
     return thread_id < size() ? thread_id : error::index_out_of_bounds;
 }
 
-CCM int cyk_table::get_coord_col_for_thread(int thread_id, int current_row, int current_col)
+CCM int cyk_table::get_col_coord_for_thread(int thread_id, int current_row, int current_col)
 {
     int number_of_threads = preferences(block_id, AT).get(prefs, preferences::number_of_threads);
     int margin = size() - current_row;

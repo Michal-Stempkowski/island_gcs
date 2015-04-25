@@ -112,6 +112,9 @@ CCM int table_set(int* table, int absolute_index, int value)
 cuda_helper = SourceNode(
     'default_cyk_helper',
     """
+#include <iostream>
+#include <sstream>
+
 __sn_cuda_debug__
 __sn_cuda_helper_common__
 __sn_cuda_error__
