@@ -18,6 +18,7 @@ class TestCodeGeneration(TestCase):
             preferences.tag(),
             {'preferences_headers': ["a", "b", "c"]})
 
+        # print(res)
         self.assertTrue(
             """enum option : int
     {

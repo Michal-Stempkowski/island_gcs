@@ -11,17 +11,22 @@ class SourceNode(object):
         self.dependencies = dependencies or []
 
         internal_dependencies = internal_dependencies or dict()
-        self.token_resolver = TokenResolver(internal_dependencies)
+        self.token_resolver = TokenResolver(self, internal_dependencies)
 
     def link(self, files, absolute_identifier, additional_data=None):
         return self.inner_link(files, set(), absolute_identifier, additional_data if additional_data else dict())
 
+    def _link_dependency(self, filename, dependency_set, files, additional_data):
+        if filename not in dependency_set:
+            dependency_set.add(filename)
+            return files[filename].inner_link(files, dependency_set, filename, additional_data)
+
+        return ''
+
     def inner_link(self, files, dependency_set, absolute_identifier, additional_data):
         result = ''
         for filename in self.dependencies:
-            if filename not in dependency_set:
-                dependency_set.add(filename)
-                result += files[filename].inner_link(files, dependency_set, filename, additional_data)
+            result += self._link_dependency(filename, dependency_set, files, additional_data)
 
         dependency_set.add(absolute_identifier)
         result += self.token_resolver.resolve_tokens(self, absolute_identifier, files, dependency_set, additional_data)
@@ -36,6 +41,49 @@ class SourceNode(object):
         del files[absolute_identifier]
 
 
+class Param(object):
+    def __init__(self, type_regex, name, is_optional=False):
+        self.type = type_regex
+        self.name = name
+        self.is_optional = is_optional
+
+    @staticmethod
+    def _on(condition, append):
+        return append if condition else ''
+
+    def expand(self, is_first=False):
+        return r'{optional_start}{comma}\s*? {type} \s*?{optional_end}'\
+            .format(
+                type=self.type,
+                comma=self._on(not is_first, r','),
+                optional_start=self._on(self.is_optional, r'('),
+                optional_end=self._on(self.is_optional, r')?'))\
+            .format(name=self.name)
+
+
+class Token(object):
+    whole_pattern_tag = 'whole_pattern'
+
+    def __init__(self, name, *args):
+        self.name = name
+        self.parameters = [arg.expand(arg is args[0]) for arg in args]
+
+    def expand(self):
+        return r'''(?P<{whole_pattern_tag}>__sg_{token_name}\({parameters}\)__)'''\
+            .format(
+                whole_pattern_tag=self.whole_pattern_tag,
+                token_name=self.name,
+                parameters=' '.join(self.parameters))
+
+    def get_regex(self):
+        return re.compile(self.expand(), re.DOTALL | re.VERBOSE)
+
+    def resolve(self, source, matches, additional_data):
+        parameters_names = [param.name for param in self.parameters]
+        params = {key: matches[key] if key in matches else None for key in parameters_names}
+        return self.logic(source, additional_data, **params)
+
+
 class TokenResolver(object):
     absolute_identifier_tag = '__sn_absolute_identifier_tag__'
     timestamp_string_tag = '__sn_timestamp_tag__'
@@ -43,38 +91,21 @@ class TokenResolver(object):
     verbose_context_param_regex = r'{name}\s*?\((?P<{name}>.*?)\)'
 
     @staticmethod
-    def param(param_type, param_name):
-        return r'\s*? {type} \s*?'.format(type=param_type).format(name=param_name)
+    def param(param_type, param_name, first=False, optional=False):
+        return Param(param_type, param_name, optional).expand(first)
 
-    def __init__(self, internal_dependencies):
+    def __init__(self, source_node, internal_dependencies):
+        self.source_node = source_node
         self.internal_dependencies = internal_dependencies
         self.code_generation_regex = re.compile(r'__sg_.*?__', re.DOTALL)
+        param_list = [
+            Param(self.identifier_param_regex, 'vals'),
+            Param(self.verbose_context_param_regex, 'begin', is_optional=True),
+            Param(self.verbose_context_param_regex, 'separator', is_optional=True),
+            Param(self.verbose_context_param_regex, 'end', is_optional=True)
+        ]
         self.generation_rules = [
-            (re.compile(
-                r'''
-
-                    (?P<whole_pattern>__sg_repeat\(
-                        {vals}
-
-                        (
-                            ,{begin}
-                            (
-                                , {separator}
-
-                                (
-                                    ,{end}
-                                )?
-                            )?
-                        )?
-                    \)__)
-
-                '''
-                .format(
-                    vals=self.param(self.identifier_param_regex, 'vals'),
-                    begin=self.param(self.verbose_context_param_regex, 'begin'),
-                    separator=self.param(self.verbose_context_param_regex, 'separator'),
-                    end=self.param(self.verbose_context_param_regex, 'end'))
-                , re.DOTALL | re.VERBOSE),
+            (Token('repeat', *param_list).get_regex(),
                 lambda source, matches, additional_data: #source)
                 source.replace(matches['whole_pattern'],
                                (matches['begin'] or '') +
@@ -82,25 +113,46 @@ class TokenResolver(object):
                                (matches['end'] or '')))
         ]
 
-    @staticmethod
-    def private_header(node_name, tag):
-        return '__{0}_{1}__'.format(node_name, tag)
+    def private_header(self, tag):
+        return '__{0}_{1}__'.format(self.source_node.name, tag)
 
-    def resolve_tokens(self, node, absolute_identifier, files, dependency_set, additional_data):
-        source = node.source.replace(self.absolute_identifier_tag, absolute_identifier)
-        source = source.replace(self.timestamp_string_tag, datetime.now().ctime())
+    def _apply_absolute_identifier(self, source, absolute_identifier):
+        return source.replace(self.absolute_identifier_tag, absolute_identifier)
 
+    def _generate_timestamps(self, source):
+        return source.replace(self.timestamp_string_tag, datetime.now().ctime())
+
+    def _perform_macro_linkage(self, source, files, dependency_set, additional_data):
         for token, source_node in self.internal_dependencies.items():
-            source = source.replace(token, source_node.inner_link(
-                files, dependency_set, self.private_header(node.name, token), additional_data))
+                source = source.replace(token, source_node.inner_link(
+                    files, dependency_set, self.private_header(token), additional_data))
 
+        return source
+
+    def _resolve_macros(self, source, additional_data):
         macros = self.code_generation_regex.findall(source)
-        # print(macros)
         for macro in macros:
             for matcher, resolver in self.generation_rules:
                 matches = [match.groupdict() for match in matcher.finditer(macro)]
                 if matches:
                     source = resolver(source, matches[0], additional_data)
-                    # print(matches)
+
+        return source
+
+    def _try_resolving_macros(self, source, files, dependency_set, node, additional_data):
+        source = self._generate_timestamps(source)
+
+        source = self._perform_macro_linkage(source, files, dependency_set, additional_data)
+
+        return self._resolve_macros(source, additional_data)
+
+    def resolve_tokens(self, node, absolute_identifier, files, dependency_set, additional_data):
+        old_source = ''
+        source = self._apply_absolute_identifier(node.source[:], absolute_identifier)
+
+        while old_source != source:
+            old_source = source[:]
+
+            source = self._try_resolving_macros(source, files, dependency_set, node, additional_data)
 
         return source
