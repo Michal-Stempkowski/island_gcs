@@ -13,7 +13,7 @@ class CykSourceSchema(object):
         self.files = dict()
         self.requires_update = True
 
-    def generate_schema(self):
+    def generate_schema(self, additional_data=None):
         _ = self.kernel
         _ = self.cuda_helper
         _ = self.kernel_main
@@ -23,7 +23,7 @@ class CykSourceSchema(object):
         _ = self.cuda_post_mortem
         _ = self.cyk_rules
 
-        _ = self.kernel.link(self.files, kernel.tag())
+        _ = self.kernel.link(self.files, kernel.tag(), additional_data)
         # print(_.split('\n')[-2])
         # print(_)
         return _

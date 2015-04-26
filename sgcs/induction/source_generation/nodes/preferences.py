@@ -15,12 +15,7 @@ class preferences
 public:
     enum option : int
     {
-        max_number_of_non_terminal_symbols,
-        max_number_of_terminal_symbols,
-        max_symbols_in_cell,
-        number_of_blocks,
-        number_of_threads,
-        sentence_length,
+        __sg_repeat(vals(preferences_headers), begin(), separator(,\n        ))__,
         enum_size               // DO NOT use it as enum, it represents size of this enum
     };
 
