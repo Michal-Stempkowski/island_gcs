@@ -10,7 +10,7 @@ from sgcs.induction.source_generation.nodes import kernel
 
 class CykRunner:
     def __init__(self, world_settings_schema, island_settings_schema, source_code_schema):
-        self.preferences_table = self.generate_preferences_table(
+        self.preferences_headers,  self.preferences_table = self.generate_preferences_table(
             world_settings_schema, island_settings_schema)
         self.error_table = self.generate_post_mortem_error_table(world_settings_schema)
         self.source_code_schema = source_code_schema
@@ -26,41 +26,48 @@ class CykRunner:
             self.source_code_schema.requires_update = False
 
     @staticmethod
-    def generate_preferences_table(world_settings, island_settings):
+    def _dict_union(d1, d2):
+        result = dict()
+        result.update(d1)
+        result.update(d2)
+
+        return result
+
+    @classmethod
+    def generate_preferences_table(cls, world_settings, island_settings):
+        joined_settings = [cls._dict_union(world_settings.field_list(), settings.field_list())
+                           for settings in island_settings]
+        headers = sorted(joined_settings[0].keys())
+
         prefs = np.array([
             [
-                settings.sentence_length,
-                settings.max_symbols_in_cell,
-                world_settings.num_of_blocks,
-                world_settings.num_of_threads,
-                world_settings.max_number_of_terminal_symbols,
-                world_settings.max_number_of_non_terminal_symbols,
-            ] for settings in island_settings
+                settings[x] for x in headers
+            ] for settings in joined_settings
         ])
-        return prefs.reshape(1, len(prefs) * len(prefs[0])).astype(np.int32)[0]
+        return headers, prefs.reshape(1, len(prefs) * len(prefs[0])).astype(np.int32)[0]
 
     @staticmethod
     def generate_post_mortem_error_table(world_settings):
-        return np.zeros(world_settings.num_of_blocks * world_settings.num_of_threads, dtype=np.int32)
+        return np.zeros(world_settings.number_of_blocks * world_settings.number_of_threads, dtype=np.int32)
 
     @property
-    def num_of_blocks(self):
-        return int(self.preferences_table[2])
+    def number_of_blocks(self):
+        return int(self.preferences_table[self.preferences_headers.index('number_of_blocks')])
 
     @property
-    def num_of_threads(self):
-        return int(self.preferences_table[3])
+    def number_of_threads(self):
+        return int(self.preferences_table[self.preferences_headers.index('number_of_threads')])
 
     @property
     def max_symbols_in_cell(self):
-        return int(self.preferences_table[1])
+        return int(self.preferences_table[self.preferences_headers.index('max_symbols_in_cell')])
 
     @staticmethod
     def create_empty_int32_table(size):
         return np.zeros((1, size)).astype(np.int32)[0]
 
     def generate_cyk_header_block(self, sentence):
-        return self.create_empty_int32_table(self.num_of_blocks * len(sentence) * len(sentence))
+        return self.create_empty_int32_table(self.number_of_blocks * len(sentence) * len(sentence))
 
     def generate_cyk_block(self, header_size):
         return self.create_empty_int32_table(header_size * self.max_symbols_in_cell)
@@ -77,8 +84,8 @@ class CykRunner:
             cuda.InOut(self.cyk_block),
             cuda.InOut(self.cyk_header_block),
             cuda.InOut(self.error_table),
-            block=(self.num_of_threads, 1, 1),
-            grid=(self.num_of_blocks, 1, 1))
+            block=(self.number_of_threads, 1, 1),
+            grid=(self.number_of_blocks, 1, 1))
 
         if np.any(self.error_table != 0):
             print(self.error_table)
