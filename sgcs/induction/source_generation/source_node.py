@@ -1,5 +1,6 @@
 from datetime import datetime
 import re
+import collections
 
 
 class SourceNode(object):
@@ -64,23 +65,28 @@ class Param(object):
 class Token(object):
     whole_pattern_tag = 'whole_pattern'
 
-    def __init__(self, name, *args):
+    def __init__(self, name, logic, *args):
         self.name = name
-        self.parameters = [arg.expand(arg is args[0]) for arg in args]
+        self.logic = logic
+        self.parameters = args
 
     def expand(self):
         return r'''(?P<{whole_pattern_tag}>__sg_{token_name}\({parameters}\)__)'''\
             .format(
                 whole_pattern_tag=self.whole_pattern_tag,
                 token_name=self.name,
-                parameters=' '.join(self.parameters))
+                parameters=' '.join([param.expand(param is self.parameters[0]) for param in self.parameters]))
 
     def get_regex(self):
         return re.compile(self.expand(), re.DOTALL | re.VERBOSE)
 
     def resolve(self, source, matches, additional_data):
         parameters_names = [param.name for param in self.parameters]
-        params = {key: matches[key] if key in matches else None for key in parameters_names}
+        parameters_names.insert(0, self.whole_pattern_tag)
+        params = collections.OrderedDict()
+        for key in parameters_names:
+            params[key] = matches[key] if key in matches else None
+        # params = {key: (matches[key] if key in matches else None) for key in parameters_names}
         return self.logic(source, additional_data, **params)
 
 
@@ -98,19 +104,19 @@ class TokenResolver(object):
         self.source_node = source_node
         self.internal_dependencies = internal_dependencies
         self.code_generation_regex = re.compile(r'__sg_.*?__', re.DOTALL)
-        param_list = [
-            Param(self.identifier_param_regex, 'vals'),
-            Param(self.verbose_context_param_regex, 'begin', is_optional=True),
-            Param(self.verbose_context_param_regex, 'separator', is_optional=True),
-            Param(self.verbose_context_param_regex, 'end', is_optional=True)
-        ]
+
         self.generation_rules = [
-            (Token('repeat', *param_list).get_regex(),
-                lambda source, matches, additional_data: #source)
-                source.replace(matches['whole_pattern'],
-                               (matches['begin'] or '') +
-                               (matches['separator'] or '').join(additional_data[matches['vals']]) +
-                               (matches['end'] or '')))
+            Token(
+                'repeat',
+
+                lambda source, additional_data, whole_pattern, vals, begin, separator, end:\
+                source.replace(whole_pattern,
+                               (begin or '') + (separator or '').join(additional_data[vals]) + (end or '')),
+
+                Param(self.identifier_param_regex, 'vals'),
+                Param(self.verbose_context_param_regex, 'begin', is_optional=True),
+                Param(self.verbose_context_param_regex, 'separator', is_optional=True),
+                Param(self.verbose_context_param_regex, 'end', is_optional=True))
         ]
 
     def private_header(self, tag):
@@ -132,10 +138,10 @@ class TokenResolver(object):
     def _resolve_macros(self, source, additional_data):
         macros = self.code_generation_regex.findall(source)
         for macro in macros:
-            for matcher, resolver in self.generation_rules:
-                matches = [match.groupdict() for match in matcher.finditer(macro)]
+            for rule in self.generation_rules:
+                matches = [match.groupdict() for match in rule.get_regex().finditer(macro)]
                 if matches:
-                    source = resolver(source, matches[0], additional_data)
+                    source = rule.resolve(source, matches[0], additional_data)
 
         return source
 
