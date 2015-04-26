@@ -16,10 +16,11 @@ public:
     enum option : int
     {
         sentence_length = 0,
-        max_alphabet_size,
         max_symbols_in_cell,
         number_of_blocks,
         number_of_threads,
+        max_number_of_terminal_symbols,
+        max_number_of_non_terminal_symbols,
         enum_size               // DO NOT use it as enum, it represents size of this enum
     };
 

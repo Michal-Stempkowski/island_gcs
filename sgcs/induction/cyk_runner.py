@@ -30,10 +30,11 @@ class CykRunner:
         prefs = np.array([
             [
                 settings.sentence_length,
-                settings.max_alphabet_size,
                 settings.max_symbols_in_cell,
                 world_settings.num_of_blocks,
-                world_settings.num_of_threads
+                world_settings.num_of_threads,
+                world_settings.max_number_of_terminal_symbols,
+                world_settings.max_number_of_non_terminal_symbols,
             ] for settings in island_settings
         ])
         return prefs.reshape(1, len(prefs) * len(prefs[0])).astype(np.int32)[0]
@@ -44,15 +45,15 @@ class CykRunner:
 
     @property
     def num_of_blocks(self):
-        return int(self.preferences_table[3])
+        return int(self.preferences_table[2])
 
     @property
     def num_of_threads(self):
-        return int(self.preferences_table[4])
+        return int(self.preferences_table[3])
 
     @property
     def max_symbols_in_cell(self):
-        return int(self.preferences_table[2])
+        return int(self.preferences_table[1])
 
     @staticmethod
     def create_empty_int32_table(size):
