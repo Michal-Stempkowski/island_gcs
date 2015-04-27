@@ -43,4 +43,10 @@ CCM void __sn_absolute_identifier_tag__(int* sentence,
     }
 }
 """,
-                        dependencies=['cuda_helper', 'cuda_post_mortem', 'preferences', 'cyk_table', 'local_data'])
+                        dependencies=[
+                            'cuda_helper',
+                            'cuda_post_mortem',
+                            'preferences',
+                            'cyk_table',
+                            'local_data',
+                            'cyk_rules'])

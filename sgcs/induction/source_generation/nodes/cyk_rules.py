@@ -9,14 +9,14 @@ cyk_rules = SourceNode('default_cyk_rules', """
 class cyk_rules
 {
 public:
-    CCM cyk_rules(int* terminal_rules_);
+    CCM cyk_rules(int* rules_by_right_);
 
 private:
-    int* terminal_rules;
+    int* rules_by_right;
 };
 
-CCM cyk_rules::cyk_rules(int* terminal_rules_) :
-    terminal_rules(terminal_rules_)
+CCM cyk_rules::cyk_rules(int* rules_by_right_) :
+    rules_by_right(rules_by_right_)
 {
 
 }

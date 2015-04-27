@@ -47,6 +47,7 @@ class CykRunner:
                 (cuda.InOut, 'error_table', lambda: self.error_table),
                 (cuda.InOut, 'table', lambda: self.cyk_block),
                 (cuda.InOut, 'table_header', lambda: self.cyk_header_block)
+                # (cuda.InOut, 'cyk_terminal')
             )
 
     def compile_kernel_if_necessary(self):
@@ -114,11 +115,6 @@ class CykRunner:
         self.func(
             cuda.In(np.array(sentence).astype(np.int32)),
             *self.data_collector.get_data_packages(),
-            # cuda.In(self.preferences_table),
-            # cuda.In(np.array(sentence).astype(np.int32)),
-            # cuda.InOut(self.cyk_block),
-            # cuda.InOut(self.cyk_header_block),
-            # cuda.InOut(self.error_table),
             block=(self.number_of_threads, 1, 1),
             grid=(self.number_of_blocks, 1, 1))
 
