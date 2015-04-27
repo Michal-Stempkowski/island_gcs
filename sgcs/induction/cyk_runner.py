@@ -8,6 +8,28 @@ _ = pycuda.autoinit
 from sgcs.induction.source_generation.nodes import kernel
 
 
+class Data(object):
+    def __init__(self, name, data_provider, wrapper):
+        self.name = name
+        self.data_provider = data_provider
+        self.wrapper = wrapper
+
+    def __call__(self):
+        return self.wrapper(self.data_provider())
+
+
+class CykDataCollector(object):
+    def __init__(self, *tuples):
+        self.cuda_type = 'int*'
+        self.data = {name: Data(name, data_provider, par_type) for (par_type, name, data_provider) in tuples}
+
+    def headers(self):
+        return sorted(self.data.keys())
+
+    def get_data_packages(self):
+        return [(self.data[name])() for name in self.headers()]
+
+
 class CykRunner:
     def __init__(self, world_settings_schema, island_settings_schema, source_code_schema):
         self.preferences_headers,  self.preferences_table = self.generate_preferences_table(
@@ -15,13 +37,23 @@ class CykRunner:
         self.error_table = self.generate_post_mortem_error_table(world_settings_schema)
         self.source_code_schema = source_code_schema
         self.module = None
-        self.func = lambda _1, _2, _3, _4, _5, block, grid: None
+        self.func = lambda *args, block, grid: None
         self.cyk_block = None
         self.cyk_header_block = None
 
+        self.data_collector =\
+            CykDataCollector(
+                (cuda.In, 'prefs', lambda: self.preferences_table),
+                (cuda.InOut, 'error_table', lambda: self.error_table),
+                (cuda.InOut, 'table', lambda: self.cyk_block),
+                (cuda.InOut, 'table_header', lambda: self.cyk_header_block)
+            )
+
     def compile_kernel_if_necessary(self):
         if self.source_code_schema.requires_update:
-            additional_data = dict(preferences_headers=self.preferences_headers)
+            additional_data = dict(
+                preferences_headers=self.preferences_headers,
+                kernel_param_names=self.data_collector.headers())
             self.module = SourceModule(self.source_code_schema.generate_schema(additional_data), no_extern_c=1)
             self.func = self.module.get_function(kernel.tag())
             self.source_code_schema.requires_update = False
@@ -80,11 +112,13 @@ class CykRunner:
         self.cyk_block = self.generate_cyk_block(len(self.cyk_header_block))
 
         self.func(
-            cuda.In(self.preferences_table),
             cuda.In(np.array(sentence).astype(np.int32)),
-            cuda.InOut(self.cyk_block),
-            cuda.InOut(self.cyk_header_block),
-            cuda.InOut(self.error_table),
+            *self.data_collector.get_data_packages(),
+            # cuda.In(self.preferences_table),
+            # cuda.In(np.array(sentence).astype(np.int32)),
+            # cuda.InOut(self.cyk_block),
+            # cuda.InOut(self.cyk_header_block),
+            # cuda.InOut(self.error_table),
             block=(self.number_of_threads, 1, 1),
             grid=(self.number_of_blocks, 1, 1))
 

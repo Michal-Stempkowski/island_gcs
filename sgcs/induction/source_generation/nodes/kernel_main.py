@@ -6,8 +6,8 @@ def tag():
 
 kernel_main = SourceNode('default_cyk_kernel_main', """
 ////CPP
-CCM void __sn_absolute_identifier_tag__(int* prefs, int* sentence, int* table,
-    int* table_header, int* error_table, const int thread_id, const int block_id)
+CCM void __sn_absolute_identifier_tag__(int* sentence,
+    __sg_repeat(vals(kernel_param_names), begin(int* ), separator(, int* ))__, const int thread_id, const int block_id)
 {
     const int number_of_blocks = preferences(block_id, AT).get(prefs, preferences::number_of_blocks);
     const int number_of_threads = preferences(block_id, AT).get(prefs,  preferences::number_of_threads);
