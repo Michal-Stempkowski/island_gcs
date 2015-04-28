@@ -16,14 +16,20 @@ class TestCodeGeneration(TestCase):
         res = preferences.preferences.link(
             {'cuda_helper': cuda_helper},
             preferences.tag(),
-            {'preferences_headers': ["a", "b", "c"]})
+            {'preferences_headers': ["a", "b", "c"],
+                'preferences_conditions': ['opt > enum_size'],
+                'preferences_sample_logic': [('true', 1),
+                                             ('true', 2),
+                                             (3,)]})
 
-        # print(res)
+        print(res)
         self.assertTrue(
             """enum option : int
     {
         a,
         b,
         c,
-        enum_size               // DO NOT use it as enum, it represents size of this enum
-    };""" in res)
+        enum_size,                          // DO NOT use it as enum, it represents size of this enum
+        ////
+        enum_size_with_additionals          // DO NOT use it as enum, it represents size of this enum
+    };""".replace(' ', '') in res.replace(' ', ''))

@@ -40,20 +40,26 @@ class CykRunner:
         self.func = lambda *args, block, grid: None
         self.cyk_block = None
         self.cyk_header_block = None
+        self.cyk_rules_by_right = self.generate_empty_right_rules_table()
 
         self.data_collector =\
             CykDataCollector(
                 (cuda.In, 'prefs', lambda: self.preferences_table),
                 (cuda.InOut, 'error_table', lambda: self.error_table),
                 (cuda.InOut, 'table', lambda: self.cyk_block),
-                (cuda.InOut, 'table_header', lambda: self.cyk_header_block)
-                # (cuda.InOut, 'cyk_terminal')
+                (cuda.InOut, 'table_header', lambda: self.cyk_header_block),
+                (cuda.InOut, 'rules_by_right', lambda: self.cyk_rules_by_right)
             )
 
     def compile_kernel_if_necessary(self):
         if self.source_code_schema.requires_update:
             additional_data = dict(
                 preferences_headers=self.preferences_headers,
+                additional_preferences=['alphabet_size'],
+                preferences_conditions=['opt > enum_size'],
+                preferences_sample_logic=[('true', 1),
+                                          ('true', 2),
+                                          (3,)],
                 kernel_param_names=self.data_collector.headers())
             self.module = SourceModule(self.source_code_schema.generate_schema(additional_data), no_extern_c=1)
             self.func = self.module.get_function(kernel.tag())
@@ -75,7 +81,7 @@ class CykRunner:
 
         prefs = np.array([
             [
-                settings[x] for x in headers
+                settings[x] for x in headers # if not x.startswith('_')
             ] for settings in joined_settings
         ])
         return headers, prefs.reshape(1, len(prefs) * len(prefs[0])).astype(np.int32)[0]
@@ -96,6 +102,18 @@ class CykRunner:
     def max_symbols_in_cell(self):
         return int(self.preferences_table[self.preferences_headers.index('max_symbols_in_cell')])
 
+    @property
+    def max_number_of_terminal_symbols(self):
+        return int(self.preferences_table[self.preferences_headers.index('max_number_of_terminal_symbols')])
+
+    @property
+    def max_number_of_non_terminal_symbols(self):
+        return int(self.preferences_table[self.preferences_headers.index('max_number_of_non_terminal_symbols')])
+
+    @property
+    def max_alphabet_size(self):
+        return self.max_number_of_terminal_symbols + self.max_number_of_non_terminal_symbols
+
     @staticmethod
     def create_empty_int32_table(size):
         return np.zeros((1, size)).astype(np.int32)[0]
@@ -105,6 +123,10 @@ class CykRunner:
 
     def generate_cyk_block(self, header_size):
         return self.create_empty_int32_table(header_size * self.max_symbols_in_cell)
+
+    def generate_empty_right_rules_table(self):
+        return self.create_empty_int32_table(self.number_of_blocks * self.max_alphabet_size *
+                                             self.max_alphabet_size * self.max_symbols_in_cell)
 
     def run_cyk(self, sentence):
         self.compile_kernel_if_necessary()

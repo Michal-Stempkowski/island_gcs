@@ -6,6 +6,10 @@ class DynamicSettingsClass(object):
     def field_list(self):
         return vars(self)
 
+    @staticmethod
+    def virtual_fields(self):
+        return []
+
 
 class WorldSettings(DynamicSettingsClass):
     def __init__(self, num_of_blocks, num_of_threads, max_number_of_terminal_symbols,

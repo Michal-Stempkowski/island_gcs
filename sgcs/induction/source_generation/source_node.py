@@ -53,17 +53,18 @@ class Param(object):
         return append if condition else ''
 
     def expand(self, is_first=False):
-        return r'{optional_start}{comma}\s*? {type} \s*?{optional_end}'\
+        return r'{optional_start}{comma}\s*? {type} \s*?{optional_end}' \
             .format(
-                type=self.type,
-                comma=self._on(not is_first, r','),
-                optional_start=self._on(self.is_optional, r'('),
-                optional_end=self._on(self.is_optional, r')?'))\
+            type=self.type,
+            comma=self._on(not is_first, r','),
+            optional_start=self._on(self.is_optional, r'('),
+            optional_end=self._on(self.is_optional, r')?')) \
             .format(name=self.name)
 
 
 class Token(object):
     whole_pattern_tag = 'whole_pattern'
+    token_name_tag = 'token_name'
 
     def __init__(self, name, logic, *args):
         self.name = name
@@ -71,11 +72,11 @@ class Token(object):
         self.parameters = args
 
     def expand(self):
-        return r'''(?P<{whole_pattern_tag}>__sg_{token_name}\({parameters}\)__)'''\
+        return r'''(?P<{whole_pattern_tag}>__sg_(?P<token_name>{token_name})\({parameters}\)__)''' \
             .format(
-                whole_pattern_tag=self.whole_pattern_tag,
-                token_name=self.name,
-                parameters=' '.join([param.expand(param is self.parameters[0]) for param in self.parameters]))
+            whole_pattern_tag=self.whole_pattern_tag,
+            token_name=self.name,
+            parameters=' '.join([param.expand(param is self.parameters[0]) for param in self.parameters]))
 
     def get_regex(self):
         return re.compile(self.expand(), re.DOTALL | re.VERBOSE)
@@ -109,15 +110,65 @@ class TokenResolver(object):
             Token(
                 'repeat',
 
-                lambda source, additional_data, whole_pattern, vals, begin, separator, end:\
-                source.replace(whole_pattern,
-                               (begin or '') + (separator or '').join(additional_data[vals]) + (end or '')),
+                lambda source, additional_data, whole_pattern, vals, begin, separator, end, optional_generation: \
+                source.replace(whole_pattern, optional_generation)
+                if optional_generation and vals not in additional_data
+                else source.replace(whole_pattern,
+                                    (begin or '') + (separator or '').join(additional_data[vals]) + (end or '')),
 
                 Param(self.identifier_param_regex, 'vals'),
                 Param(self.verbose_context_param_regex, 'begin', is_optional=True),
                 Param(self.verbose_context_param_regex, 'separator', is_optional=True),
-                Param(self.verbose_context_param_regex, 'end', is_optional=True))
+                Param(self.verbose_context_param_regex, 'end', is_optional=True),
+                Param(self.verbose_context_param_regex, 'optional_generation', is_optional=True)),
+            Token(
+                'named_block',
+
+                lambda source, additional_data, whole_pattern, name, params, separator, body: \
+                source.replace(whole_pattern,
+                               "{name} (__sg_repeat(vals({params}), separator({separator}))__)"
+                               .format(name=name, params=params, separator=separator)),
+
+                Param(self.identifier_param_regex, 'name'),
+                Param(self.identifier_param_regex, 'params'),
+                Param(self.verbose_context_param_regex, 'separator'),
+                Param(self.verbose_context_param_regex, 'body')),
+
+            Token(
+                'ternary_operator',
+
+                lambda source, additional_data, whole_pattern, cond, t, f:
+                source.replace(whole_pattern,
+                               r'( ({cond}) ? ({t}) : ({f}) )'
+                               .format(cond=cond, t=t, f=f)),
+
+                Param(self.verbose_context_param_regex, 'cond'),
+                Param(self.verbose_context_param_regex, 't'),
+                Param(self.verbose_context_param_regex, 'f')),
+
+            Token(
+                'ternary_operator_generator',
+
+                lambda source, additional_data, whole_pattern, table, index:
+                source.replace(whole_pattern, self.ternary_operator_generator_logic(table, index, additional_data)),
+
+                Param(self.identifier_param_regex, 'table'),
+                Param(self.verbose_context_param_regex, 'index'))
         ]
+
+    @staticmethod
+    def ternary_operator_generator_logic(condition_table_names, index, additional_data):
+        index = int(index)
+        condition_table = additional_data[condition_table_names]
+        row = condition_table[index]
+        if index < len(condition_table) - 1:
+            return r'( ({cond}) ? ({t}) : ({f}) )'\
+                .format(cond=row[0], t=row[1], f='__sg_{recursion_name}(table({table_name}), index({new_index}))__'
+                        .format(recursion_name='ternary_operator_generator',
+                                table_name=condition_table_names,
+                                new_index=index+1))
+        else:
+            return str(row[0])
 
     def private_header(self, tag):
         return '__{0}_{1}__'.format(self.source_node.name, tag)
@@ -130,8 +181,8 @@ class TokenResolver(object):
 
     def _perform_macro_linkage(self, source, files, dependency_set, additional_data):
         for token, source_node in self.internal_dependencies.items():
-                source = source.replace(token, source_node.inner_link(
-                    files, dependency_set, self.private_header(token), additional_data))
+            source = source.replace(token, source_node.inner_link(
+                files, dependency_set, self.private_header(token), additional_data))
 
         return source
 
@@ -140,7 +191,7 @@ class TokenResolver(object):
         for macro in macros:
             for rule in self.generation_rules:
                 matches = [match.groupdict() for match in rule.get_regex().finditer(macro)]
-                if matches:
+                if matches and Token.token_name_tag in matches[0] and matches[0][Token.token_name_tag] == rule.name:
                     source = rule.resolve(source, matches[0], additional_data)
 
         return source
