@@ -4,8 +4,59 @@ import collections
 import uuid
 
 
+class Param(object):
+    def __init__(self, type_regex, name, is_optional=False):
+        self.type = type_regex
+        self.name = name
+        self.is_optional = is_optional
+
+    @staticmethod
+    def _on(condition, append):
+        return append if condition else ''
+
+    def expand(self, is_first=False):
+        return r'{optional_start}{comma}\s*? {type} \s*?{optional_end}' \
+            .format(
+            type=self.type,
+            comma=self._on(not is_first, r','),
+            optional_start=self._on(self.is_optional, r'('),
+            optional_end=self._on(self.is_optional, r')?')) \
+            .format(name=self.name)
+
+
+class Token(object):
+    whole_pattern_tag = 'whole_pattern'
+    token_name_tag = 'token_name'
+    token_character = '@@'
+
+    def __init__(self, name, logic, *args):
+        self.name = name
+        self.logic = logic
+        self.parameters = args
+
+    def expand(self):
+        return r'''(?P<{whole_pattern_tag}>{tc}sg_(?P<token_name>{token_name})\({parameters}\){tc})''' \
+            .format(
+                tc=Token.token_character,
+                whole_pattern_tag=self.whole_pattern_tag,
+                token_name=self.name,
+                parameters=' '.join([param.expand(param is self.parameters[0]) for param in self.parameters]))
+
+    def get_regex(self):
+        return re.compile(self.expand(), re.DOTALL | re.VERBOSE)
+
+    def resolve(self, source, matches, additional_data):
+        parameters_names = [param.name for param in self.parameters]
+        parameters_names.insert(0, self.whole_pattern_tag)
+        params = collections.OrderedDict()
+        for key in parameters_names:
+            params[key] = matches[key] if key in matches else None
+        # params = {key: (matches[key] if key in matches else None) for key in parameters_names}
+        return self.logic(source, additional_data, **params)
+
+
 class SourceNode(object):
-    absolute_identifier_tag = '__sn_absolute_identifier_tag__'
+    absolute_identifier_tag = '{tc}sn_absolute_identifier_tag{tc}'.format(tc=Token.token_character)
 
     def __init__(self, name, source, dependencies=None, internal_dependencies=None):
         self.name = name
@@ -43,58 +94,9 @@ class SourceNode(object):
         del files[absolute_identifier]
 
 
-class Param(object):
-    def __init__(self, type_regex, name, is_optional=False):
-        self.type = type_regex
-        self.name = name
-        self.is_optional = is_optional
-
-    @staticmethod
-    def _on(condition, append):
-        return append if condition else ''
-
-    def expand(self, is_first=False):
-        return r'{optional_start}{comma}\s*? {type} \s*?{optional_end}' \
-            .format(
-            type=self.type,
-            comma=self._on(not is_first, r','),
-            optional_start=self._on(self.is_optional, r'('),
-            optional_end=self._on(self.is_optional, r')?')) \
-            .format(name=self.name)
-
-
-class Token(object):
-    whole_pattern_tag = 'whole_pattern'
-    token_name_tag = 'token_name'
-
-    def __init__(self, name, logic, *args):
-        self.name = name
-        self.logic = logic
-        self.parameters = args
-
-    def expand(self):
-        return r'''(?P<{whole_pattern_tag}>__sg_(?P<token_name>{token_name})\({parameters}\)__)''' \
-            .format(
-            whole_pattern_tag=self.whole_pattern_tag,
-            token_name=self.name,
-            parameters=' '.join([param.expand(param is self.parameters[0]) for param in self.parameters]))
-
-    def get_regex(self):
-        return re.compile(self.expand(), re.DOTALL | re.VERBOSE)
-
-    def resolve(self, source, matches, additional_data):
-        parameters_names = [param.name for param in self.parameters]
-        parameters_names.insert(0, self.whole_pattern_tag)
-        params = collections.OrderedDict()
-        for key in parameters_names:
-            params[key] = matches[key] if key in matches else None
-        # params = {key: (matches[key] if key in matches else None) for key in parameters_names}
-        return self.logic(source, additional_data, **params)
-
-
 class TokenResolver(object):
-    absolute_identifier_tag = '__sn_absolute_identifier_tag__'
-    timestamp_string_tag = '__sn_timestamp_tag__'
+    absolute_identifier_tag = '{tc}sn_absolute_identifier_tag{tc}'.format(tc=Token.token_character)
+    timestamp_string_tag = '{tc}sn_timestamp_tag{tc}'.format(tc=Token.token_character)
     identifier_param_regex = r'{name}\s*?\(\s*?(?P<{name}>[a-zA-Z_]\w*?)?\s*?\)'
     verbose_context_param_regex = r'{name}\s*?\((?P<{name}>.*?)\)'
 
@@ -105,7 +107,7 @@ class TokenResolver(object):
     def __init__(self, source_node, internal_dependencies):
         self.source_node = source_node
         self.internal_dependencies = internal_dependencies
-        self.code_generation_regex = re.compile(r'__sg_.*?__', re.DOTALL)
+        self.code_generation_regex = re.compile(r'{tc}sg_.*?{tc}'.format(tc=Token.token_character), re.DOTALL)
 
         self.generation_rules = [
             Token(
@@ -127,8 +129,8 @@ class TokenResolver(object):
 
                 lambda source, additional_data, whole_pattern, name, params, separator, body: \
                 source.replace(whole_pattern,
-                               "{name} (__sg_repeat(vals({params}), separator({separator}))__)"
-                               .format(name=name, params=params, separator=separator)),
+                               "{name} ({tc}sg_repeat(vals({params}), separator({separator})){tc})"
+                               .format(tc=Token.token_character, name=name, params=params, separator=separator)),
 
                 Param(self.identifier_param_regex, 'name'),
                 Param(self.identifier_param_regex, 'params'),
@@ -164,8 +166,9 @@ class TokenResolver(object):
         row = condition_table[index]
         if index < len(condition_table) - 1:
             return r'( ({cond}) ? ({t}) : ({f}) )'\
-                .format(cond=row[0], t=row[1], f='__sg_{recursion_name}(table({table_name}), index({new_index}))__'
-                        .format(recursion_name='ternary_operator',
+                .format(cond=row[0], t=row[1], f='{tc}sg_{recursion_name}(table({table_name}), index({new_index})){tc}'
+                        .format(tc=Token.token_character,
+                                recursion_name='ternary_operator',
                                 table_name=condition_table_names,
                                 new_index=index+1))
         else:
@@ -180,10 +183,10 @@ class TokenResolver(object):
         additional_data[tmp_table] = [(comp_fun(var, tup[0], additional_data), tup[1]) if len(tup) > 1 else (tup[0],)
                                       for tup in table_data]
 
-        return '__sg_ternary_operator(table({table}))__'.format(table=tmp_table)
+        return '{tc}sg_ternary_operator(table({table})){tc}'.format(tc=Token.token_character, table=tmp_table)
 
     def private_header(self, tag):
-        return '__{0}_{1}__'.format(self.source_node.name, tag)
+        return '{tc}{0}_{1}{tc}'.format(self.source_node.name, tag, tc=Token.token_character)
 
     def _apply_absolute_identifier(self, source, absolute_identifier):
         return source.replace(self.absolute_identifier_tag, absolute_identifier)

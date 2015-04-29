@@ -119,15 +119,15 @@ cuda_helper = SourceNode(
 #include <iostream>
 #include <sstream>
 
-__sn_cuda_debug__
-__sn_cuda_helper_common__
-__sn_cuda_error__
-__sn_cuda_table_helper__
+@@sn_cuda_debug@@
+@@sn_cuda_helper_common@@
+@@sn_cuda_error@@
+@@sn_cuda_table_helper@@
 """,
     internal_dependencies={
-        '__sn_cuda_debug__': cuda_debug,
-        '__sn_cuda_helper_common__': cuda_helper_common,
-        '__sn_cuda_error__': cuda_error,
-        '__sn_cuda_table_helper__': cuda_table_helper
+        '@@sn_cuda_debug@@': cuda_debug,
+        '@@sn_cuda_helper_common@@': cuda_helper_common,
+        '@@sn_cuda_error@@': cuda_error,
+        '@@sn_cuda_table_helper@@': cuda_table_helper
     })
 

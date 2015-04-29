@@ -15,9 +15,9 @@ class preferences
 public:
     enum option : int
     {
-        __sg_repeat(vals(preferences_headers), begin(), separator(,\n        ))__,
+        @@sg_repeat(vals(preferences_headers), begin(), separator(,\n        ))@@,
         enum_size,                          // DO NOT use it as enum, it represents size of this enum
-        __sg_repeat(vals(additional_preferences), begin(), separator(,\n        ), end(,), optional_generation(////))__
+        @@sg_repeat(vals(additional_preferences), begin(), separator(,\n        ), end(,), optional_generation(////))@@
         enum_size_with_additionals          // DO NOT use it as enum, it represents size of this enum
     };
 
@@ -49,14 +49,14 @@ CCM int preferences::get(int *preferences, option opt) const
         return invalid_value;
     }
     else
-    __sg_named_block(name(if), params(preferences_conditions), separator(, ), body( ))__
+    @@sg_named_block(name(if), params(preferences_conditions), separator(, ), body( ))@@
     ////if (opt > enum_size)
     {
-        return __sg_ternary_operator(table(preferences_sample_logic), index(0))__;
-        //// return __sg_ternary_operator(cond(true), t(0), f(1))__;
+        return @@sg_ternary_operator(table(preferences_sample_logic), index(0))@@;
+        //// return @@sg_ternary_operator(cond(true), t(0), f(1))@@;
     }
 
-    int test = __sg_switch(table(preferences_sample_logic), var(opt))__;
+    int test = @@sg_switch(table(preferences_sample_logic), var(opt))@@;
 
     //// if (opt == alphabet_size)
     //// {
