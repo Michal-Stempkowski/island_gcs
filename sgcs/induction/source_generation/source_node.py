@@ -115,7 +115,7 @@ class TokenResolver(object):
 
                 lambda source, additional_data, whole_pattern, vals, begin, separator, end, optional_generation: \
                 source.replace(whole_pattern, optional_generation)
-                if optional_generation and vals not in additional_data
+                if optional_generation and (vals not in additional_data or not additional_data[vals])
                 else source.replace(whole_pattern,
                                     (begin or '') + (separator or '').join(additional_data[vals]) + (end or '')),
 

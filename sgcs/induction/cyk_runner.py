@@ -53,13 +53,16 @@ class CykRunner:
 
     def compile_kernel_if_necessary(self):
         if self.source_code_schema.requires_update:
+            additional_preferences = [
+                ('alphabet_size', 'preferences[get_index(max_number_of_terminal_symbols)] + ' +
+                                  'preferences[get_index(max_number_of_non_terminal_symbols)]'),
+                (0,)
+            ]
             additional_data = dict(
                 preferences_headers=self.preferences_headers,
-                additional_preferences=['alphabet_size'],
-                preferences_conditions=['opt > enum_size'],
-                preferences_sample_logic=[('true', 1),
-                                          ('false', 2),
-                                          (3,)],
+                additional_preferences=additional_preferences,
+                additional_preferences_headers=[pref[0] for pref in filter(lambda p: len(p) > 1,
+                                                                           additional_preferences)],
                 kernel_param_names=self.data_collector.headers())
             self.module = SourceModule(self.source_code_schema.generate_schema(additional_data), no_extern_c=1)
             self.func = self.module.get_function(kernel.tag())

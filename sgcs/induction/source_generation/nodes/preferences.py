@@ -17,7 +17,12 @@ public:
     {
         @@sg_repeat(vals(preferences_headers), begin(), separator(,\n        ))@@,
         enum_size,                          // DO NOT use it as enum, it represents size of this enum
-        @@sg_repeat(vals(additional_preferences), begin(), separator(,\n        ), end(,), optional_generation(////))@@
+        @@sg_repeat(
+            vals(additional_preferences_headers),
+            begin(),
+            separator(,\n        ),
+            end(,),
+            optional_generation(////))@@
         enum_size_with_additionals          // DO NOT use it as enum, it represents size of this enum
     };
 
@@ -48,20 +53,10 @@ CCM int preferences::get(int *preferences, option opt) const
     {
         return invalid_value;
     }
-    else
-    @@sg_named_block(name(if), params(preferences_conditions), separator(, ), body( ))@@
-    ////if (opt > enum_size)
+    else if (opt > enum_size)
     {
-        return @@sg_ternary_operator(table(preferences_sample_logic), index(0))@@;
-        //// return @@sg_ternary_operator(cond(true), t(0), f(1))@@;
+        return @@sg_switch(table(additional_preferences), var(opt))@@;
     }
-
-    int test = @@sg_switch(table(preferences_sample_logic), var(opt))@@;
-
-    //// if (opt == alphabet_size)
-    //// {
-    ////     return get(preferences, max_number_of_terminal_symbols) + get(preferences, max_number_of_non_terminal_symbols);
-    //// }
 
     return preferences[get_index(opt)];
 }
