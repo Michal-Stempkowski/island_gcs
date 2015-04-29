@@ -58,7 +58,7 @@ class CykRunner:
                 additional_preferences=['alphabet_size'],
                 preferences_conditions=['opt > enum_size'],
                 preferences_sample_logic=[('true', 1),
-                                          ('true', 2),
+                                          ('false', 2),
                                           (3,)],
                 kernel_param_names=self.data_collector.headers())
             self.module = SourceModule(self.source_code_schema.generate_schema(additional_data), no_extern_c=1)

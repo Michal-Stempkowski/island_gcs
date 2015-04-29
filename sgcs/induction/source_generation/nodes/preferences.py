@@ -52,9 +52,11 @@ CCM int preferences::get(int *preferences, option opt) const
     __sg_named_block(name(if), params(preferences_conditions), separator(, ), body( ))__
     ////if (opt > enum_size)
     {
-        return __sg_ternary_operator_generator(table(preferences_sample_logic), index(0))__;
+        return __sg_ternary_operator(table(preferences_sample_logic), index(0))__;
         //// return __sg_ternary_operator(cond(true), t(0), f(1))__;
     }
+
+    int test = __sg_switch(table(preferences_sample_logic), var(opt))__;
 
     //// if (opt == alphabet_size)
     //// {

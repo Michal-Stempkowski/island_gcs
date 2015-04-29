@@ -1,6 +1,7 @@
 from datetime import datetime
 import re
 import collections
+import uuid
 
 
 class SourceNode(object):
@@ -137,23 +138,23 @@ class TokenResolver(object):
             Token(
                 'ternary_operator',
 
-                lambda source, additional_data, whole_pattern, cond, t, f:
-                source.replace(whole_pattern,
-                               r'( ({cond}) ? ({t}) : ({f}) )'
-                               .format(cond=cond, t=t, f=f)),
-
-                Param(self.verbose_context_param_regex, 'cond'),
-                Param(self.verbose_context_param_regex, 't'),
-                Param(self.verbose_context_param_regex, 'f')),
-
-            Token(
-                'ternary_operator_generator',
-
                 lambda source, additional_data, whole_pattern, table, index:
-                source.replace(whole_pattern, self.ternary_operator_generator_logic(table, index, additional_data)),
+                source.replace(whole_pattern,
+                               self.ternary_operator_generator_logic(table, index or 0, additional_data)),
 
                 Param(self.identifier_param_regex, 'table'),
-                Param(self.verbose_context_param_regex, 'index'))
+                Param(self.verbose_context_param_regex, 'index', is_optional=True)),
+
+            Token(
+                'switch',
+
+                lambda source, additional_data, whole_pattern, table, var, comparator:
+                source.replace(whole_pattern,
+                               self.switch_logic(table, var, comparator, additional_data)),
+
+                Param(self.identifier_param_regex, 'table'),
+                Param(self.identifier_param_regex, 'var'),
+                Param(self.identifier_param_regex, 'comparator', is_optional=True))
         ]
 
     @staticmethod
@@ -164,11 +165,22 @@ class TokenResolver(object):
         if index < len(condition_table) - 1:
             return r'( ({cond}) ? ({t}) : ({f}) )'\
                 .format(cond=row[0], t=row[1], f='__sg_{recursion_name}(table({table_name}), index({new_index}))__'
-                        .format(recursion_name='ternary_operator_generator',
+                        .format(recursion_name='ternary_operator',
                                 table_name=condition_table_names,
                                 new_index=index+1))
         else:
             return str(row[0])
+
+    @staticmethod
+    def switch_logic(table, var, comparator, additional_data):
+        comp_fun = additional_data[comparator] if comparator else (lambda a, b, add_data: '{0} == {1}'.format(a, b))
+        table_data = additional_data[table]
+
+        tmp_table = 'tmp_' + str(uuid.uuid4()).replace('-', '')
+        additional_data[tmp_table] = [(comp_fun(var, tup[0], additional_data), tup[1]) if len(tup) > 1 else (tup[0],)
+                                      for tup in table_data]
+
+        return '__sg_ternary_operator(table({table}))__'.format(table=tmp_table)
 
     def private_header(self, tag):
         return '__{0}_{1}__'.format(self.source_node.name, tag)
