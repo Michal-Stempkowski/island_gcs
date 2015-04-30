@@ -3,6 +3,8 @@ import pycuda.driver as cuda
 from pycuda.compiler import SourceModule
 
 import pycuda.autoinit
+from sgcs.induction.table_accessor import TableAccessor
+
 _ = pycuda.autoinit
 
 from sgcs.induction.source_generation.nodes import kernel
@@ -21,7 +23,8 @@ class Data(object):
 class CykDataCollector(object):
     def __init__(self, *tuples):
         self.cuda_type = 'int*'
-        self.data = {name: Data(name, data_provider, par_type) for (par_type, name, data_provider) in tuples}
+        self.data = {name: Data(name, data_provider, par_type)
+                     for (par_type, name, data_provider, table_accessor) in tuples}
 
     def headers(self):
         return sorted(self.data.keys())
@@ -45,12 +48,32 @@ class CykRunner:
 
         self.data_collector =\
             CykDataCollector(
-                (cuda.In, 'prefs', lambda: self.preferences_table),
-                (cuda.InOut, 'error_table', lambda: self.error_table),
-                (cuda.InOut, 'table', lambda: self.cyk_block),
-                (cuda.InOut, 'table_header', lambda: self.cyk_header_block),
-                (cuda.InOut, 'rules_by_right', lambda: self.cyk_rules_by_right),
-                (cuda.InOut, 'rules_by_right_header', lambda: self.cyk_rules_by_right_header)
+                (cuda.In, 'prefs', lambda: self.preferences_table,
+                 TableAccessor(
+                     len(self.preferences_headers),
+                     world_settings_schema.number_of_blocks,
+                     data=self.preferences_table
+                 )),
+                (cuda.InOut, 'error_table', lambda: self.error_table,
+                 TableAccessor(
+                     world_settings_schema.number_of_blocks,
+                     world_settings_schema.number_of_threads
+                 )),
+                (cuda.InOut, 'table', lambda: self.cyk_block, TableAccessor()),
+                (cuda.InOut, 'table_header', lambda: self.cyk_header_block, TableAccessor()),
+                (cuda.InOut, 'rules_by_right', lambda: self.cyk_rules_by_right,
+                 TableAccessor(
+                     self.number_of_blocks,
+                     self.max_alphabet_size,
+                     self.max_alphabet_size
+                 )),
+                (cuda.InOut, 'rules_by_right_header', lambda: self.cyk_rules_by_right_header,
+                 TableAccessor(
+                     self.number_of_blocks,
+                     self.max_alphabet_size,
+                     self.max_alphabet_size,
+                     self.max_symbols_in_cell
+                 ))
             )
 
     def compile_kernel_if_necessary(self):

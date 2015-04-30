@@ -34,6 +34,7 @@ class TestCykRunner(TestCase):
 
     def test_is_cyk_working(self):
         self.sut.run_cyk(self.sentence)
+
         self.assertEquals(768, len(self.sut.cyk_header_block))
         self.assertEquals(12288, len(self.sut.cyk_block))
 
