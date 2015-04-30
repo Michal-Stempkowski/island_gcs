@@ -40,6 +40,7 @@ class CykRunner:
         self.func = lambda *args, block, grid: None
         self.cyk_block = None
         self.cyk_header_block = None
+        self.cyk_rules_by_right_header = self.generate_empty_right_rules_header_table()
         self.cyk_rules_by_right = self.generate_empty_right_rules_table()
 
         self.data_collector =\
@@ -48,7 +49,8 @@ class CykRunner:
                 (cuda.InOut, 'error_table', lambda: self.error_table),
                 (cuda.InOut, 'table', lambda: self.cyk_block),
                 (cuda.InOut, 'table_header', lambda: self.cyk_header_block),
-                (cuda.InOut, 'rules_by_right', lambda: self.cyk_rules_by_right)
+                (cuda.InOut, 'rules_by_right', lambda: self.cyk_rules_by_right),
+                (cuda.InOut, 'rules_by_right_header', lambda: self.cyk_rules_by_right_header)
             )
 
     def compile_kernel_if_necessary(self):
@@ -127,9 +129,12 @@ class CykRunner:
     def generate_cyk_block(self, header_size):
         return self.create_empty_int32_table(header_size * self.max_symbols_in_cell)
 
-    def generate_empty_right_rules_table(self):
+    def generate_empty_right_rules_header_table(self):
         return self.create_empty_int32_table(self.number_of_blocks * self.max_alphabet_size *
-                                             self.max_alphabet_size * self.max_symbols_in_cell)
+                                             self.max_alphabet_size)
+
+    def generate_empty_right_rules_table(self):
+        return self.create_empty_int32_table(len(self.cyk_rules_by_right_header) * self.max_symbols_in_cell)
 
     def run_cyk(self, sentence):
         self.compile_kernel_if_necessary()
