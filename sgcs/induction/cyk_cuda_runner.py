@@ -110,8 +110,9 @@ class CykCudaBuilder(object):
 
     @classmethod
     def perform_startup_cuda_operations(cls, cuda_runner, sentence):
-        table_header = cls.init_table(cuda_runner, 'table_header', [cuda_runner.number_of_blocks, len(sentence), len(sentence)])
-        cls.init_table(cuda_runner,'table', table_header.dimensions[:] + [cuda_runner.max_symbols_in_cell])
+        table_header = cls.init_table(cuda_runner, 'table_header',
+                                      [cuda_runner.number_of_blocks, len(sentence), len(sentence)])
+        cls.init_table(cuda_runner, 'table', table_header.dimensions[:] + [cuda_runner.max_symbols_in_cell])
 
     @staticmethod
     def _dict_union(d1, d2):
