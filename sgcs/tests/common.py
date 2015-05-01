@@ -1,4 +1,4 @@
-from sgcs.induction.cyk_runner import CykRunner
+from sgcs.induction.cyk_cuda_runner import CykCudaRunner
 from sgcs.induction.source_generation.cyk_source_schema import CykSourceSchema
 
 
@@ -32,7 +32,7 @@ def get_sut():
     island_settings = [IslandSettings(16, 16) for _ in range(world_settings.number_of_blocks)]
     source_code_schema = CykSourceSchema()
 
-    test = CykRunner(world_settings, island_settings, source_code_schema)
+    test = CykCudaRunner(world_settings, island_settings, source_code_schema)
 
     return test
     # sentence = [1, 2, 2, 2, 2, 1, 2, 2, 1, 3, 4, 5, 1, 3, 4, 5]
