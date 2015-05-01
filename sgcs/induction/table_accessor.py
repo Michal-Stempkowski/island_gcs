@@ -3,7 +3,8 @@ from functools import reduce
 
 
 class TableAccessor(object):
-    def __init__(self, *dimensions, data=None):
+    def __init__(self, *dimensions, data=None, autocreate=True):
+        self.autocreate = autocreate
         self.total_size = 0
         self._dimensions = []
         self.dimensions = dimensions
@@ -53,11 +54,11 @@ class TableAccessor(object):
         return np.zeros((1, size)).astype(np.int32)[0]
 
     def get(self, *params):
-        index = self._calculate_index(params)
+        index = self._calculate_index(*params)
         return self.table[index]
 
     def set(self, *params):
-        index = self._calculate_index(params[:-1])
+        index = self._calculate_index(*params[:-1])
         self.table[index] = params[-1]
 
     def get_raw_table(self):
@@ -69,7 +70,7 @@ class TableAccessor(object):
                 raise IndexError('Table length = {0} and provided initializer length = {1} does not match!'
                                  .format(self.total_size, len(new_table)))
             self.table = new_table
-        elif self.total_size > 0:
+        elif self.total_size > 0 and self.autocreate:
             self.table = self._create_empty_int32_table(self.total_size)
 
     def get_shaped_raw_table(self):
