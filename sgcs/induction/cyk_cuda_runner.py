@@ -37,6 +37,16 @@ class CykDataCollector(object):
 
 
 class CykCudaBuilder(object):
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def init_table(cuda_runner, table_name, dimensions):
+        table_accessor = cuda_runner.get_table_accessor(table_name)
+        table_accessor.dimensions = dimensions
+        table_accessor.set_raw_table()
+        return table_accessor
+
     @staticmethod
     def create_table_accessors(cuda_runner, world_settings_schema):
         return CykDataCollector(
@@ -83,27 +93,25 @@ class CykCudaBuilder(object):
             kernel_param_names=cuda_runner.data_collector.headers())
         return additional_data
 
+    @staticmethod
+    def print_all_cuda_tables(cuda_runner, error_table):
+        print(error_table)
+        for name, data in cuda_runner.data_collector.data.items():
+            print(name)
+            print(data.get().get_raw_table())
+            print(len(data.get().get_raw_table()))
 
-class CykCudaRunner:
-    def __init__(self, world_settings_schema, island_settings_schema, source_code_schema, cuda_builder=CykCudaBuilder()):
-        self.preferences_headers,  self.preferences_table = self.generate_preferences_table(
-            world_settings_schema, island_settings_schema)
-        self.source_code_schema = source_code_schema
-        self.module = None
-        self.func = lambda *args, block, grid: None
-        self.cuda_builder = cuda_builder
+    @classmethod
+    def perform_cuda_cleanup_operations(cls, cuda_runner):
+        error_table = cuda_runner.get_table_accessor('error_table').get_raw_table()
+        if np.any(error_table != 0):
+            cls.print_all_cuda_tables(cuda_runner, error_table)
+            raise RuntimeError()
 
-        self.data_collector = self.cuda_builder.create_table_accessors(self, world_settings_schema)
-
-    def get_table_accessor(self, name):
-        return self.data_collector.data[name].get()
-
-    def compile_kernel_if_necessary(self):
-        if self.source_code_schema.requires_update:
-            self.module = SourceModule(self.source_code_schema.generate_schema(
-                self.cuda_builder.get_additional_data(self)), no_extern_c=1)
-            self.func = self.module.get_function(kernel.tag())
-            self.source_code_schema.requires_update = False
+    @classmethod
+    def perform_startup_cuda_operations(cls, cuda_runner, sentence):
+        table_header = cls.init_table(cuda_runner, 'table_header', [cuda_runner.number_of_blocks, len(sentence), len(sentence)])
+        cls.init_table(cuda_runner,'table', table_header.dimensions[:] + [cuda_runner.max_symbols_in_cell])
 
     @staticmethod
     def _dict_union(d1, d2):
@@ -125,6 +133,28 @@ class CykCudaRunner:
             ] for settings in joined_settings
         ])
         return headers, prefs.reshape(1, len(prefs) * len(prefs[0])).astype(np.int32)[0]
+
+
+class CykCudaRunner:
+    def __init__(self, world_settings_schema, island_settings_schema, source_code_schema, cuda_builder=CykCudaBuilder()):
+        self.cuda_builder = cuda_builder
+        self.preferences_headers,  self.preferences_table = self.cuda_builder.generate_preferences_table(
+            world_settings_schema, island_settings_schema)
+        self.source_code_schema = source_code_schema
+        self.module = None
+        self.func = lambda *args, block, grid: None
+
+        self.data_collector = self.cuda_builder.create_table_accessors(self, world_settings_schema)
+
+    def get_table_accessor(self, name):
+        return self.data_collector.data[name].get()
+
+    def compile_kernel_if_necessary(self):
+        if self.source_code_schema.requires_update:
+            self.module = SourceModule(self.source_code_schema.generate_schema(
+                self.cuda_builder.get_additional_data(self)), no_extern_c=1)
+            self.func = self.module.get_function(kernel.tag())
+            self.source_code_schema.requires_update = False
 
     @property
     def number_of_blocks(self):
@@ -150,29 +180,6 @@ class CykCudaRunner:
     def max_alphabet_size(self):
         return self.max_number_of_terminal_symbols + self.max_number_of_non_terminal_symbols
 
-    def init_table(self, table_name, dimensions):
-        table_accessor = self.get_table_accessor(table_name)
-        table_accessor.dimensions = dimensions
-        table_accessor.set_raw_table()
-        return table_accessor
-
-    def perform_startup_cuda_operations(self, sentence):
-        table_header = self.init_table('table_header', [self.number_of_blocks, len(sentence), len(sentence)])
-        self.init_table('table', table_header.dimensions[:] + [self.max_symbols_in_cell])
-
-    def print_all_cuda_tables(self, error_table):
-        print(error_table)
-        for name, data in self.data_collector.data.items():
-            print(name)
-            print(data.get().get_raw_table())
-            print(len(data.get().get_raw_table()))
-
-    def perform_cuda_cleanup_operations(self):
-        error_table = self.get_table_accessor('error_table').get_raw_table()
-        if np.any(error_table != 0):
-            self.print_all_cuda_tables(error_table)
-            raise RuntimeError()
-
     def get_cuda_block_shape(self):
         return self.number_of_threads, 1, 1
 
@@ -182,7 +189,7 @@ class CykCudaRunner:
     def run_cyk(self, sentence):
         self.compile_kernel_if_necessary()
 
-        self.perform_startup_cuda_operations(sentence)
+        self.cuda_builder.perform_startup_cuda_operations(self, sentence)
 
         self.func(
             cuda.In(np.array(sentence).astype(np.int32)),
@@ -190,4 +197,4 @@ class CykCudaRunner:
             block=self.get_cuda_block_shape(),
             grid=self.get_cuda_grid_shape())
 
-        self.perform_cuda_cleanup_operations()
+        self.cuda_builder.perform_cuda_cleanup_operations(self)
