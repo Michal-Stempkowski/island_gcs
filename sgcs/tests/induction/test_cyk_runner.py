@@ -35,9 +35,12 @@ class TestCykRunner(TestCase):
     def test_is_cyk_working(self):
         self.sut.run_cyk(self.sentence)
 
-        self.assertEquals(768, len(self.sut.cyk_header_block))
-        self.assertEquals(12288, len(self.sut.cyk_block))
+        table_header = self.sut.get_table_accessor('table_header').get_raw_table()
+        table = self.sut.get_table_accessor('table').get_raw_table()
 
-        row_0 = np.extract((self.sut.cyk_block > 0), self.sut.cyk_block).tolist()
+        self.assertEquals(768, len(table_header))
+        self.assertEquals(12288, len(table))
+
+        row_0 = np.extract((table > 0), table).tolist()
         print(row_0)
         self.assertTrue(np.array_equal(row_0, np.concatenate((self.sentence, self.sentence, self.sentence))))

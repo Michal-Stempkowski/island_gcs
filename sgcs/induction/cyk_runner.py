@@ -11,20 +11,23 @@ from sgcs.induction.source_generation.nodes import kernel
 
 
 class Data(object):
-    def __init__(self, name, data_provider, wrapper):
+    def __init__(self, name, wrapper, table_accessor):
         self.name = name
-        self.data_provider = data_provider
         self.wrapper = wrapper
+        self.table_accessor = table_accessor
 
     def __call__(self):
-        return self.wrapper(self.data_provider())
+        return self.wrapper(self.table_accessor.get_raw_table())
+
+    def get(self):
+        return self.table_accessor
 
 
 class CykDataCollector(object):
     def __init__(self, *tuples):
         self.cuda_type = 'int*'
-        self.data = {name: Data(name, data_provider, par_type)
-                     for (par_type, name, data_provider, table_accessor) in tuples}
+        self.data = {name: Data(name, par_type, table_accessor)
+                     for (par_type, name, table_accessor) in tuples}
 
     def headers(self):
         return sorted(self.data.keys())
@@ -37,37 +40,37 @@ class CykRunner:
     def __init__(self, world_settings_schema, island_settings_schema, source_code_schema):
         self.preferences_headers,  self.preferences_table = self.generate_preferences_table(
             world_settings_schema, island_settings_schema)
-        self.error_table = self.generate_post_mortem_error_table(world_settings_schema)
+        # self.error_table = self.generate_post_mortem_error_table(world_settings_schema)
         self.source_code_schema = source_code_schema
         self.module = None
         self.func = lambda *args, block, grid: None
-        self.cyk_block = None
-        self.cyk_header_block = None
-        self.cyk_rules_by_right_header = self.generate_empty_right_rules_header_table()
-        self.cyk_rules_by_right = self.generate_empty_right_rules_table()
+        # self.cyk_block = None
+        # self.cyk_header_block = None
+        # self.cyk_rules_by_right_header = self.generate_empty_right_rules_header_table()
+        # self.cyk_rules_by_right = self.generate_empty_right_rules_table()
 
         self.data_collector =\
             CykDataCollector(
-                (cuda.In, 'prefs', lambda: self.preferences_table,
+                (cuda.In, 'prefs',
                  TableAccessor(
                      len(self.preferences_headers),
                      world_settings_schema.number_of_blocks,
                      data=self.preferences_table
                  )),
-                (cuda.InOut, 'error_table', lambda: self.error_table,
+                (cuda.InOut, 'error_table',
                  TableAccessor(
                      world_settings_schema.number_of_blocks,
                      world_settings_schema.number_of_threads
                  )),
-                (cuda.InOut, 'table', lambda: self.cyk_block, TableAccessor()),
-                (cuda.InOut, 'table_header', lambda: self.cyk_header_block, TableAccessor()),
-                (cuda.InOut, 'rules_by_right', lambda: self.cyk_rules_by_right,
+                (cuda.InOut, 'table', TableAccessor()),
+                (cuda.InOut, 'table_header', TableAccessor()),
+                (cuda.InOut, 'rules_by_right',
                  TableAccessor(
                      self.number_of_blocks,
                      self.max_alphabet_size,
                      self.max_alphabet_size
                  )),
-                (cuda.InOut, 'rules_by_right_header', lambda: self.cyk_rules_by_right_header,
+                (cuda.InOut, 'rules_by_right_header',
                  TableAccessor(
                      self.number_of_blocks,
                      self.max_alphabet_size,
@@ -75,6 +78,9 @@ class CykRunner:
                      self.max_symbols_in_cell
                  ))
             )
+
+    def get_table_accessor(self, name):
+        return self.data_collector.data[name].get()
 
     def compile_kernel_if_necessary(self):
         if self.source_code_schema.requires_update:
@@ -114,10 +120,6 @@ class CykRunner:
         ])
         return headers, prefs.reshape(1, len(prefs) * len(prefs[0])).astype(np.int32)[0]
 
-    @staticmethod
-    def generate_post_mortem_error_table(world_settings):
-        return np.zeros(world_settings.number_of_blocks * world_settings.number_of_threads, dtype=np.int32)
-
     @property
     def number_of_blocks(self):
         return int(self.preferences_table[self.preferences_headers.index('number_of_blocks')])
@@ -142,35 +144,32 @@ class CykRunner:
     def max_alphabet_size(self):
         return self.max_number_of_terminal_symbols + self.max_number_of_non_terminal_symbols
 
-    @staticmethod
-    def create_empty_int32_table(size):
-        return np.zeros((1, size)).astype(np.int32)[0]
-
-    def generate_cyk_header_block(self, sentence):
-        return self.create_empty_int32_table(self.number_of_blocks * len(sentence) * len(sentence))
-
-    def generate_cyk_block(self, header_size):
-        return self.create_empty_int32_table(header_size * self.max_symbols_in_cell)
-
-    def generate_empty_right_rules_header_table(self):
-        return self.create_empty_int32_table(self.number_of_blocks * self.max_alphabet_size *
-                                             self.max_alphabet_size)
-
-    def generate_empty_right_rules_table(self):
-        return self.create_empty_int32_table(len(self.cyk_rules_by_right_header) * self.max_symbols_in_cell)
-
     def run_cyk(self, sentence):
         self.compile_kernel_if_necessary()
 
-        self.cyk_header_block = self.generate_cyk_header_block(sentence)
-        self.cyk_block = self.generate_cyk_block(len(self.cyk_header_block))
+        table_header = self.data_collector.data['table_header'].get()
+        table_header.dimensions = [self.number_of_blocks, len(sentence), len(sentence)]
+        table_header.set_raw_table()
 
+        table = self.data_collector.data['table'].get()
+        table.dimensions = table_header.dimensions[:] + [self.max_symbols_in_cell]
+        table.set_raw_table()
+        # self.cyk_header_block = self.generate_cyk_header_block(sentence)
+        # self.cyk_block = self.generate_cyk_block(len(self.cyk_header_block))
+
+        test = self.data_collector.get_data_packages()
+        print(self.data_collector.headers())
         self.func(
             cuda.In(np.array(sentence).astype(np.int32)),
             *self.data_collector.get_data_packages(),
             block=(self.number_of_threads, 1, 1),
             grid=(self.number_of_blocks, 1, 1))
 
-        if np.any(self.error_table != 0):
-            print(self.error_table)
+        error_table = self.data_collector.data['error_table'].get().get_raw_table()
+        if np.any(error_table != 0):
+            print(error_table)
+            for name, data in self.data_collector.data.items():
+                print(name)
+                print(data.get().get_raw_table())
+                print(len(data.get().get_raw_table()))
             raise RuntimeError()
