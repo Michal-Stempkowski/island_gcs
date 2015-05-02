@@ -13,6 +13,8 @@ CCM void @@sn_absolute_identifier_tag@@(int* sentence,
     const int number_of_threads = preferences(block_id, AT).get(prefs,  preferences::number_of_threads);
 
     local_data thread_data(block_id, number_of_blocks, thread_id, number_of_threads, error_table);
+    cyk_rules rules(rules_by_right, rules_by_right_header, &thread_data, prefs);
+
     cyk_table cyk(block_id, AT, prefs, table, table_header);
 
     int row = 0;

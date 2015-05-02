@@ -111,6 +111,13 @@ class TokenResolver(object):
 
         self.generation_rules = [
             Token(
+                'insert',
+
+                lambda source, additional_data, whole_pattern, content_id:
+                source.replace(whole_pattern, additional_data[content_id]),
+
+                Param(self.identifier_param_regex, 'content_id')),
+            Token(
                 'repeat',
 
                 lambda source, additional_data, whole_pattern, vals, begin, separator, end, optional_generation: \

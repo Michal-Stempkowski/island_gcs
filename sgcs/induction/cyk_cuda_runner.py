@@ -66,15 +66,15 @@ class CykCudaBuilder(object):
             (cuda.InOut, 'rules_by_right',
              TableAccessor(
                  cuda_runner.number_of_blocks,
-                 cuda_runner.max_alphabet_size,
-                 cuda_runner.max_alphabet_size
+                 cuda_runner.max_number_of_non_terminal_symbols,
+                 cuda_runner.max_number_of_non_terminal_symbols,
+                 cuda_runner.max_symbols_in_cell
              )),
             (cuda.InOut, 'rules_by_right_header',
              TableAccessor(
                  cuda_runner.number_of_blocks,
-                 cuda_runner.max_alphabet_size,
-                 cuda_runner.max_alphabet_size,
-                 cuda_runner.max_symbols_in_cell
+                 cuda_runner.max_number_of_non_terminal_symbols,
+                 cuda_runner.max_number_of_non_terminal_symbols
              ))
         )
 
@@ -146,6 +146,7 @@ class CykCudaRunner:
         self.func = lambda *args, block, grid: None
 
         self.data_collector = self.cuda_builder.create_table_accessors(self, world_settings_schema)
+        self.additional_data = self.cuda_builder.get_additional_data(self)
 
     def get_table_accessor(self, name):
         return self.data_collector.data[name].get()
@@ -153,7 +154,7 @@ class CykCudaRunner:
     def compile_kernel_if_necessary(self):
         if self.source_code_schema.requires_update:
             self.module = SourceModule(self.source_code_schema.generate_schema(
-                self.cuda_builder.get_additional_data(self)), no_extern_c=1)
+                self.additional_data), no_extern_c=1)
             self.func = self.module.get_function(kernel.tag())
             self.source_code_schema.requires_update = False
 
