@@ -32,17 +32,43 @@ class TestCykRules(TestCase):
         self.sut.source_code_schema.kernel_main = kernel_main
         self.rules_header = self.sut.get_table_accessor('rules_by_right_header')
         self.rules = self.sut.get_table_accessor('rules_by_right')
+        self.test_get_rule_by_right_side_code =\
+            '''////CPP
+            if (thread_data.block_id == 0 && thread_data.thread_id == 0)
+             {
+                rules_by_right[0] = rules.get_rule_by_right_side(value, value, 0, AT);
+             }'''
 
-    def test_is_rules_working(self):
-        self.rules_header.set(0, 3, 3, 1)
-        self.rules.set(0, 3, 3, 0, 4)
+    def test_is_rules_get_rule_by_right_side_for_non_terminals_working(self):
+        non_terminal_symbol = 3
+        self.rules_header.set(0, non_terminal_symbol, non_terminal_symbol, 1)
+        self.rules.set(0, non_terminal_symbol, non_terminal_symbol, 0, 4)
 
         self.sut.additional_data['test_code'] =\
-        '''////CPP
-        if (thread_data.block_id == 0 && thread_data.thread_id == 0)
-         {
-            rules_by_right[0] = rules.get_rule_by_right_side(3, 3, 0, AT);
-         }'''
+            '''
+                ////CPP
+                int value = {symbol};
+            '''.format(symbol=non_terminal_symbol) + self.test_get_rule_by_right_side_code
+        self.assertEquals(0, self.rules.get(0, 0, 0, 0))
+
+        self.sut.run_cyk(self.sentence)
+
+        self.assertEquals(4, self.rules.get(0, 0, 0, 0))
+
+    def test_is_rules_get_rule_by_right_side_for_terminals_working(self):
+        terminal_symbol = 3
+        masked_value = -2 ** 31 + terminal_symbol
+        real_index = self.sut.max_number_of_non_terminal_symbols + terminal_symbol
+
+        self.rules_header.set(0, real_index, real_index, 1)
+        self.rules.set(0, real_index, real_index, 0, 4)
+
+        self.sut.additional_data['test_code'] =\
+            '''
+                ////CPP
+                int value = {symbol};
+            '''.format(symbol=masked_value) + self.test_get_rule_by_right_side_code
+
         self.assertEquals(0, self.rules.get(0, 0, 0, 0))
 
         self.sut.run_cyk(self.sentence)

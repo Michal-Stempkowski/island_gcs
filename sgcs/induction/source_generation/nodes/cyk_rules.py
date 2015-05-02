@@ -9,8 +9,8 @@ cyk_rules = SourceNode('default_cyk_rules', """
 class cyk_rules
 {
 public:
-    static const int terminal_mask = 2 << 31;
-    static const int terminal_mask_negated = ~(2 << 31);
+    static const int terminal_mask = 1 << 31;
+    static const int terminal_mask_negated = ~(1 << 31);
 
     CCM cyk_rules(int* rules_by_right_, int* rules_by_right_header_, local_data *thread_data_, int* prefs_);
     CCM int get_rule_by_right_side(int left_symbol, int right_symbol, int pos,

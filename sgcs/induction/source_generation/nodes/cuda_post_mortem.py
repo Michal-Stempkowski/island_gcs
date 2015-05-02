@@ -12,8 +12,8 @@ cuda_post_mortem = SourceNode('cuda_post_mortem', """
 enum post_mortem_error : int
 {
     internal_error = -1,
-    cyk_row_fill_error = 2 << 0,
-    cyk_fatal_index_out_of_bounds = 2 << 1
+    cyk_row_fill_error = 1,
+    cyk_fatal_index_out_of_bounds = 2 << 0
 };
 
 __shared__ bool working_properly;
