@@ -1,7 +1,7 @@
+import numpy as np
 from unittest import TestCase
 from sgcs.induction.source_generation.source_node import SourceNode
 from sgcs.tests import common
-
 
 kernel_main = SourceNode('default_cyk_kernel_main', """
 ////CPP test kernel
@@ -29,10 +29,22 @@ class TestCykRules(TestCase):
         self.sut = common.get_sut()
         self.sentence = [1, 2, 2, 2, 2, 1, 2, 2, 1, 3, 4, 5, 1, 3, 4, 5]
 
-    def test_is_cuda_working(self):
         self.sut.source_code_schema.kernel_main = kernel_main
-        self.sut.additional_data['test_code'] = 'rules_by_right[0] = 4;'
+        self.rules_header = self.sut.get_table_accessor('rules_by_right_header')
+        self.rules = self.sut.get_table_accessor('rules_by_right')
+
+    def test_is_rules_working(self):
+        self.rules_header.set(0, 3, 3, 1)
+        self.rules.set(0, 3, 3, 0, 4)
+
+        self.sut.additional_data['test_code'] =\
+        '''////CPP
+        if (thread_data.block_id == 0 && thread_data.thread_id == 0)
+         {
+            rules_by_right[0] = rules.get_rule_by_right_side(3, 3, 0, AT);
+         }'''
+        self.assertEquals(0, self.rules.get(0, 0, 0, 0))
 
         self.sut.run_cyk(self.sentence)
 
-        self.assertEquals(4, self.sut.get_table_accessor('rules_by_right').get(0, 0, 0, 0))
+        self.assertEquals(4, self.rules.get(0, 0, 0, 0))

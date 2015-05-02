@@ -41,13 +41,13 @@ CCM cyk_rules::cyk_rules(int* rules_by_right_, int* rules_by_right_header_,
 CCM int cyk_rules::get_rule_by_right_side(int left_symbol, int right_symbol, int pos,
     const char* source_code_localization)
 {
-    ////left_symbol = (left_symbol & terminal_mask) ? (left_symbol & terminal_mask_negated) : left_symbol;
-
     left_symbol = translate_if_terminal(left_symbol);
     right_symbol = translate_if_terminal(right_symbol);
 
     const int alphabet_size = preferences(thread_data->block_id, AT).get(prefs, preferences::alphabet_size);
-    const int rules_in_cell = table_get(rules_by_right_header, generate_absolute_index(
+    const int max_symbols_in_cell = preferences(thread_data->block_id, AT).get(prefs, preferences::max_symbols_in_cell);
+
+    int rules_in_cell = table_get(rules_by_right_header, generate_absolute_index(
         thread_data->block_id, thread_data->number_of_blocks,
         left_symbol, alphabet_size,
         right_symbol, alphabet_size));
@@ -58,11 +58,16 @@ CCM int cyk_rules::get_rule_by_right_side(int left_symbol, int right_symbol, int
             post_mortem_error::cyk_fatal_index_out_of_bounds, source_code_localization);
     }
 
+    if (pos >= rules_in_cell)
+    {
+        return error::index_out_of_bounds;
+    }
+
     return table_get(rules_by_right, generate_absolute_index(
         thread_data->block_id, thread_data->number_of_blocks,
         left_symbol, alphabet_size,
         right_symbol, alphabet_size,
-        pos, rules_in_cell));
+        pos, max_symbols_in_cell));
 }
 
 CCM bool cyk_rules::is_terminal(int symbol)

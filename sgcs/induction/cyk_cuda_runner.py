@@ -66,15 +66,15 @@ class CykCudaBuilder(object):
             (cuda.InOut, 'rules_by_right',
              TableAccessor(
                  cuda_runner.number_of_blocks,
-                 cuda_runner.max_number_of_non_terminal_symbols,
-                 cuda_runner.max_number_of_non_terminal_symbols,
+                 cuda_runner.max_alphabet_size,
+                 cuda_runner.max_alphabet_size,
                  cuda_runner.max_symbols_in_cell
              )),
             (cuda.InOut, 'rules_by_right_header',
              TableAccessor(
                  cuda_runner.number_of_blocks,
-                 cuda_runner.max_number_of_non_terminal_symbols,
-                 cuda_runner.max_number_of_non_terminal_symbols
+                 cuda_runner.max_alphabet_size,
+                 cuda_runner.max_alphabet_size
              ))
         )
 
