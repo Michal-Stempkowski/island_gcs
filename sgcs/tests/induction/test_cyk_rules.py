@@ -3,7 +3,7 @@ from unittest import TestCase
 from sgcs.induction.source_generation.source_node import SourceNode
 from sgcs.tests import common
 
-kernel_main = SourceNode('default_cyk_kernel_main', """
+kernel_main = SourceNode('test_cyk_rules_kernel_main', """
 ////CPP test kernel
 CCM void @@sn_absolute_identifier_tag@@(int* sentence,
     @@sg_repeat(vals(kernel_param_names), begin(int* ), separator(, int* ))@@, const int thread_id, const int block_id)
