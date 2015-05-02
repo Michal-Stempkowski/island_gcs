@@ -20,7 +20,7 @@ public:
     };
 
     CCM cyk_table(const int block_id_, const char* source_code_localization_,
-        int* prefs_, int* table_, int* table_header_);
+        int* prefs_, int* table_, int* table_header_, cyk_rules* rules_);
     CCM ~cyk_table();
 
     CCM int size() const;
@@ -39,6 +39,7 @@ private:
     const char* source_code_localization;
     const int size_;
     const int depth_;
+    cyk_rules* rules;
 
     int* prefs;
     int* table;
@@ -54,7 +55,7 @@ private:
 
 
 CCM cyk_table::cyk_table(const int block_id_, const char* source_code_localization_,
-    int* prefs_, int* table_, int* table_header_) :
+    int* prefs_, int* table_, int* table_header_, cyk_rules* rules_) :
 block_id(block_id_),
 number_of_blocks(preferences(block_id_, source_code_localization_).get(prefs_, preferences::number_of_blocks)),
 source_code_localization(source_code_localization_),
@@ -62,7 +63,8 @@ prefs(prefs_),
 table(table_),
 table_header(table_header_),
 size_(preferences(block_id_, source_code_localization_).get(prefs_, preferences::sentence_length)),
-depth_(preferences(block_id_, source_code_localization_).get(prefs_, preferences::max_symbols_in_cell))
+depth_(preferences(block_id_, source_code_localization_).get(prefs_, preferences::max_symbols_in_cell)),
+rules(rules_)
 {
 }
 
@@ -196,9 +198,9 @@ CCM void cyk_table::fill_first_row(int* sentence, int col, local_data* thread_da
 
 CCM void cyk_table::fill_next_row(int* sentence, int row, int col, local_data* thread_data)
 {
-
+    add_symbol_to_cell(row, col, 3);
 }
 
 #endif
 """,
-                         dependencies=['cuda_helper', 'cuda_post_mortem', 'preferences'])
+                         dependencies=['cuda_helper', 'cuda_post_mortem', 'preferences', 'cyk_rules'])

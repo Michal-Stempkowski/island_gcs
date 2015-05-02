@@ -1,3 +1,4 @@
+from hamcrest import *
 import numpy as np
 from unittest import TestCase
 from sgcs.induction.source_generation.source_node import SourceNode
@@ -14,7 +15,7 @@ CCM void @@sn_absolute_identifier_tag@@(int* sentence,
     local_data thread_data(block_id, number_of_blocks, thread_id, number_of_threads, error_table);
     cyk_rules rules(rules_by_right, rules_by_right_header, &thread_data, prefs);
 
-    cyk_table cyk(block_id, AT, prefs, table, table_header);
+    cyk_table cyk(block_id, AT, prefs, table, table_header, &rules);
 
     int row = 0;
     int col = cyk.get_starting_col_coord_for_thread(thread_id);
@@ -45,7 +46,9 @@ CCM void @@sn_absolute_identifier_tag@@(int* sentence,
 }""",
                         dependencies=[
                             'cuda_helper',
+                            'cuda_post_mortem',
                             'preferences',
+                            'cyk_table',
                             'local_data',
                             'cyk_rules'])
 
@@ -66,4 +69,5 @@ class TestCykTable(TestCase):
         #      }'''
 
     def test_if_cyk_table_filling_properly(self):
-        self.assertTrue(True)
+        self.sut.run_cyk(self.sentence)
+        assert_that(self.table.get(0, 1, 0, 0), equal_to(3))

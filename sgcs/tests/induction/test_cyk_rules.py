@@ -74,3 +74,27 @@ class TestCykRules(TestCase):
         self.sut.run_cyk(self.sentence)
 
         self.assertEquals(4, self.rules.get(0, 0, 0, 0))
+
+    def test_get_number_of_rules(self):
+        non_terminal_symbol = 3
+        self.rules_header.set(0, non_terminal_symbol, non_terminal_symbol, 1)
+        self.rules.set(0, non_terminal_symbol, non_terminal_symbol, 0, 4)
+
+        self.sut.additional_data['test_code'] =\
+            '''
+                ////CPP
+                int value = {symbol};
+            '''.format(symbol=non_terminal_symbol) +\
+            '''////CPP
+            if (thread_data.block_id == 0 && thread_data.thread_id == 0)
+             {
+                rules_by_right[0] = rules.get_number_of_rules(value, value);
+                rules_by_right[1] = rules.get_number_of_rules(value + 1, value + 1);
+             }'''
+        self.assertEquals(0, self.rules.get(0, 0, 0, 0))
+        self.assertEquals(0, self.rules.get(0, 0, 0, 1))
+
+        self.sut.run_cyk(self.sentence)
+
+        self.assertEquals(1, self.rules.get(0, 0, 0, 0))
+        self.assertEquals(0, self.rules.get(0, 0, 0, 1))

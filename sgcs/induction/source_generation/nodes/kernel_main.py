@@ -15,7 +15,7 @@ CCM void @@sn_absolute_identifier_tag@@(int* sentence,
     local_data thread_data(block_id, number_of_blocks, thread_id, number_of_threads, error_table);
     cyk_rules rules(rules_by_right, rules_by_right_header, &thread_data, prefs);
 
-    cyk_table cyk(block_id, AT, prefs, table, table_header);
+    cyk_table cyk(block_id, AT, prefs, table, table_header, &rules);
 
     int row = 0;
     int col = cyk.get_starting_col_coord_for_thread(thread_id);

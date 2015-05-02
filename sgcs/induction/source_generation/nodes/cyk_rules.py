@@ -13,6 +13,7 @@ public:
     static const int terminal_mask_negated = ~(1 << 31);
 
     CCM cyk_rules(int* rules_by_right_, int* rules_by_right_header_, local_data *thread_data_, int* prefs_);
+    CCM int get_number_of_rules(int left_symbol, int right_symbol);
     CCM int get_rule_by_right_side(int left_symbol, int right_symbol, int pos,
         const char* source_code_localization);
 
@@ -36,6 +37,16 @@ CCM cyk_rules::cyk_rules(int* rules_by_right_, int* rules_by_right_header_,
     rules_by_right_header(rules_by_right_header_)
 {
 
+}
+
+CCM int cyk_rules::get_number_of_rules(int left_symbol, int right_symbol)
+{
+    const int alphabet_size = preferences(thread_data->block_id, AT).get(prefs, preferences::alphabet_size);
+
+    return table_get(rules_by_right_header, generate_absolute_index(
+        thread_data->block_id, thread_data->number_of_blocks,
+        left_symbol, alphabet_size,
+        right_symbol, alphabet_size));
 }
 
 CCM int cyk_rules::get_rule_by_right_side(int left_symbol, int right_symbol, int pos,
