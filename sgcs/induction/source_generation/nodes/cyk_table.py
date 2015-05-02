@@ -26,7 +26,8 @@ public:
     CCM int size() const;
     CCM int depth() const;
 
-    CCM void fill_first_row(int* sentence, int row, int col, local_data* thread_data);
+    CCM void fill_first_row(int* sentence, int col, local_data* thread_data);
+    CCM void fill_next_row(int* sentence, int row, int col, local_data* thread_data);
 
     CCM int get_row_coord_for_thread(int thread_id, int current_row, int current_col);
     CCM int get_starting_col_coord_for_thread(int thread_id);
@@ -175,7 +176,7 @@ CCM int cyk_table::get_col_coord_for_thread(int thread_id, int current_row, int 
     return (current_col + active_threads) % margin;
 }
 
-CCM void cyk_table::fill_first_row(int* sentence, int row, int col, local_data* thread_data)
+CCM void cyk_table::fill_first_row(int* sentence, int col, local_data* thread_data)
 {
     auto symbol = table_get(sentence, generate_absolute_index(
         col, size()));
@@ -185,12 +186,17 @@ CCM void cyk_table::fill_first_row(int* sentence, int row, int col, local_data* 
         throw_post_mortem_error(thread_data, post_mortem_error::cyk_row_fill_error, AT);
     }
 
-    auto result = add_symbol_to_cell(row, col, symbol);
+    auto result = add_symbol_to_cell(0, col, symbol);
 
     if (result < error::no_errors_occured)
     {
         throw_post_mortem_error(thread_data, post_mortem_error::cyk_row_fill_error, AT);
     }
+}
+
+CCM void cyk_table::fill_next_row(int* sentence, int row, int col, local_data* thread_data)
+{
+
 }
 
 #endif

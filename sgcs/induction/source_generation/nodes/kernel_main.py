@@ -31,11 +31,11 @@ CCM void @@sn_absolute_identifier_tag@@(int* sentence,
         }
         else if (row == 0)
         {
-            cyk.fill_first_row(sentence, row, col, &thread_data);
+            cyk.fill_first_row(sentence, col, &thread_data);
         }
         else
         {
-
+            cyk.fill_next_row(sentence, row, col, &thread_data);
         }
 
         int old_row = row;
